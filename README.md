@@ -1,297 +1,256 @@
-# React Router Guide
+# Authentication Integration Guide
 
-## What is React Router?
+## Theory and Concepts
 
-React Router is a client-side routing library for React applications. It allows you to create single-page applications with dynamic, client-side routing.
+### 1. Authentication Flow
+Authentication is the process of verifying a user's identity. In web applications, this typically involves:
+1. User provides credentials (email/password)
+2. Server validates credentials and returns a token
+3. Client stores the token
+4. Token is used for subsequent requests
 
-## Core Concepts
+### 2. Token-Based Authentication
+- **JWT (JSON Web Token)**: A compact, URL-safe way of representing claims between parties
+- **Storage**: Tokens are typically stored in localStorage or cookies
+- **Usage**: Sent with each request in Authorization header
 
-1. **BrowserRouter**: Uses HTML5 history API to keep UI in sync with URL
-2. **Routes**: Defines route configuration and mapping
-3. **Route**: Individual route definitions
-4. **Link**: Navigation without page reload
-5. **Outlet**: Renders child routes
+### 3. Route Protection
+Different approaches to protect routes:
+1. **Component-Level**: Check auth in each component
+2. **Route-Level**: Use route guards/middleware
+3. **API-Level**: Check token validity on server
 
-## Step-by-Step Implementation
+## Implementation Guide
 
-### 1. Installation
-
-```bash
-npm install react-router-dom
-```
-
-### 2. Basic Setup
-
-```javascript
-// src/app/router/index.jsx
-import { createBrowserRouter } from 'react-router-dom'
-import { HomePage } from '@/pages'
-
-export const router = createBrowserRouter([
-  {
-    path: '/',
-    element: <HomePage />
-  }
-])
-
-// src/app/index.jsx
-import { RouterProvider } from 'react-router-dom'
-import { router } from './router'
-
-export const App = () => {
-  return <RouterProvider router={router} />
-}
-```
-
-### 3. Creating Pages
+### 1. Session API Layer
 
 ```javascript
-// src/pages/home/ui/HomePage.jsx
-export const HomePage = () => {
-  return (
-    <div>
-      <h1>Home Page</h1>
-      <p>Welcome to our app!</p>
-    </div>
-  )
-}
-
-// src/pages/about/ui/AboutPage.jsx
-export const AboutPage = () => {
-  return (
-    <div>
-      <h1>About Page</h1>
-      <p>Learn more about us</p>
-    </div>
-  )
-}
-```
-
-### 4. Adding Multiple Routes
-
-```javascript
-// src/app/router/index.jsx
-import { HomePage, AboutPage } from '@/pages'
-
-export const router = createBrowserRouter([
-  {
-    path: '/',
-    element: <HomePage />
+// src/entities/session/api/sessionApi.js
+export const sessionApi = {
+  // Login function
+  async login({ email, password }) {
+    // API call to authenticate
+    const token = await authenticateUser(email, password)
+    localStorage.setItem('token', token)
+    return { token }
   },
-  {
-    path: '/about',
-    element: <AboutPage />
+
+  // Check authentication status
+  async check() {
+    const token = localStorage.getItem('token')
+    if (!token) throw new Error('Unauthorized')
+    return true
+  },
+
+  // Logout function
+  async logout() {
+    localStorage.removeItem('token')
   }
-])
-```
-
-### 5. Creating Layout
-
-```javascript
-// src/widgets/layouts/RootLayout.jsx
-import { Outlet } from 'react-router-dom'
-
-export const RootLayout = () => {
-  return (
-    <div>
-      <header>
-        <nav>{/* Navigation links */}</nav>
-      </header>
-      <main>
-        <Outlet />
-      </main>
-      <footer>{/* Footer content */}</footer>
-    </div>
-  )
 }
 ```
 
-### 6. Implementing Navigation
+### 2. Form Validation Schema
 
 ```javascript
-// src/widgets/layouts/Header.jsx
-import { Link, NavLink } from 'react-router-dom'
+// src/entities/session/model/schema.js
+import { z } from 'zod'
 
-export const Header = () => {
-  return (
-    <nav>
-      <NavLink 
-        to="/"
-        className={({ isActive }) => 
-          isActive ? 'text-blue-500' : ''
-        }
-      >
-        Home
-      </NavLink>
-      <NavLink 
-        to="/about"
-        className={({ isActive }) => 
-          isActive ? 'text-blue-500' : ''
-        }
-      >
-        About
-      </NavLink>
-    </nav>
-  )
-}
+export const loginSchema = z.object({
+  email: z.string()
+    .email('Invalid email format')
+    .min(1, 'Email is required'),
+  password: z.string()
+    .min(6, 'Password must be at least 6 characters')
+})
 ```
 
-## Common Use Cases
-
-### 1. Dynamic Routes
+### 3. Login Form Hook
 
 ```javascript
-// Router configuration
-{
-  path: '/todo/:id',
-  element: <TodoPage />
-}
-
-// TodoPage component
-import { useParams } from 'react-router-dom'
-
-export const TodoPage = () => {
-  const { id } = useParams()
-  return <div>Todo ID: {id}</div>
-}
-```
-
-### 2. Programmatic Navigation
-
-```javascript
-import { useNavigate } from 'react-router-dom'
-
-export const TodoForm = () => {
+// src/entities/session/hooks/useLoginForm.js
+export const useLoginForm = () => {
   const navigate = useNavigate()
+  
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors, isSubmitting }
+  } = useForm({
+    resolver: zodResolver(loginSchema)
+  })
 
   const onSubmit = async (data) => {
-    await saveTodo(data)
-    navigate('/todos')
+    try {
+      await sessionApi.login(data)
+      navigate('/')
+    } catch (error) {
+      setError('root', {
+        message: error.message
+      })
+    }
   }
 
-  return <form onSubmit={onSubmit}>...</form>
-}
-```
-
-### 3. Query Parameters
-
-```javascript
-import { useSearchParams } from 'react-router-dom'
-
-export const TodoList = () => {
-  const [searchParams, setSearchParams] = useSearchParams()
-  const filter = searchParams.get('filter') || 'all'
-
-  return (
-    <select 
-      value={filter}
-      onChange={e => setSearchParams({ filter: e.target.value })}
-    >
-      <option value="all">All</option>
-      <option value="active">Active</option>
-      <option value="completed">Completed</option>
-    </select>
-  )
-}
-```
-
-### 4. Protected Routes
-
-```javascript
-import { Navigate, useLocation } from 'react-router-dom'
-
-const PrivateRoute = ({ children }) => {
-  const isAuthenticated = useAuth() // Your auth hook
-  const location = useLocation()
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} />
+  return {
+    register,
+    handleSubmit: handleSubmit(onSubmit),
+    errors,
+    isSubmitting
   }
-
-  return children
-}
-
-// Usage in router
-{
-  path: '/profile',
-  element: (
-    <PrivateRoute>
-      <ProfilePage />
-    </PrivateRoute>
-  )
 }
 ```
+
+### 4. Route Protection with Loaders
+
+```javascript
+// src/app/router/index.jsx
+const authLoader = async () => {
+  try {
+    await sessionApi.check()
+    return null
+  } catch (error) {
+    return redirect('/login')
+  }
+}
+
+const guestLoader = async () => {
+  try {
+    await sessionApi.check()
+    return redirect('/')
+  } catch (error) {
+    return null
+  }
+}
+
+export const router = createBrowserRouter([
+  {
+    path: '/',
+    element: <HomePage />,
+    loader: authLoader  // Protected route
+  },
+  {
+    path: '/login',
+    element: <LoginPage />,
+    loader: guestLoader  // Guest route
+  }
+])
+```
+
+## Key Features
+
+### 1. Route Protection
+- **authLoader**: Protects routes from unauthorized access
+- **guestLoader**: Prevents authenticated users from accessing guest pages
+- **Automatic Redirects**: Users are automatically redirected to appropriate pages
+
+### 2. Form Handling
+- **Validation**: Uses Zod for schema validation
+- **Error Handling**: Proper error messages for invalid credentials
+- **Loading States**: Shows loading state during form submission
+
+### 3. Session Management
+- **Token Storage**: Secure token storage in localStorage
+- **API Integration**: Centralized session API
+- **Logout Handling**: Clean session cleanup
 
 ## Best Practices
 
-1. **Route Organization**
-   ```javascript
-   const router = createBrowserRouter([
-     {
-       element: <RootLayout />,
-       errorElement: <ErrorPage />,
-       children: [
-         {
-           path: '/',
-           element: <HomePage />
-         },
-         {
-           path: '/about',
-           element: <AboutPage />
-         }
-       ]
-     }
-   ])
-   ```
+### 1. Security
+- Store sensitive data in secure HTTP-only cookies
+- Implement token refresh mechanism
+- Use HTTPS for all API requests
+- Sanitize user input
 
-2. **Lazy Loading**
-   ```javascript
-   import { lazy } from 'react'
-   
-   const AboutPage = lazy(() => import('./pages/AboutPage'))
-   
-   // In router
-   {
-     path: '/about',
-     element: (
-       <Suspense fallback={<Loading />}>
-         <AboutPage />
-       </Suspense>
-     )
-   }
-   ```
+### 2. User Experience
+- Show loading states during authentication
+- Provide clear error messages
+- Redirect users to intended destination
+- Preserve form data on validation errors
 
-3. **Error Handling**
-   ```javascript
-   const ErrorPage = () => {
-     const error = useRouteError()
-     return (
-       <div>
-         <h1>Oops!</h1>
-         <p>{error.message}</p>
-       </div>
-     )
-   }
-   ```
+### 3. Code Organization
+- Separate authentication logic into modules
+- Use typed schemas for validation
+- Centralize route protection logic
+- Keep components focused on presentation
 
-## Common Hooks
+## Common Patterns
 
-1. `useNavigate()`: Programmatic navigation
-2. `useParams()`: Access URL parameters
-3. `useSearchParams()`: Handle query parameters
-4. `useLocation()`: Access current location
-5. `useRouteError()`: Access route errors
+### 1. Protected API Requests
+```javascript
+const api = axios.create({
+  baseURL: '/api',
+  headers: {
+    'Content-Type': 'application/json'
+  }
+})
 
-## Tips
+api.interceptors.request.use(config => {
+  const token = localStorage.getItem('token')
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+```
 
-1. Always use `Link` or `NavLink` for navigation
-2. Implement proper error boundaries
-3. Use lazy loading for better performance
-4. Keep route configurations clean and organized
-5. Use descriptive route names
+### 2. Error Handling
+```javascript
+api.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.response?.status === 401) {
+      sessionApi.logout()
+      navigate('/login')
+    }
+    return Promise.reject(error)
+  }
+)
+```
+
+### 3. Form Submission
+```javascript
+const onSubmit = async (data) => {
+  try {
+    setSubmitting(true)
+    await sessionApi.login(data)
+    navigate('/')
+  } catch (error) {
+    handleError(error)
+  } finally {
+    setSubmitting(false)
+  }
+}
+```
+
+## Testing
+
+### 1. Unit Tests
+```javascript
+describe('sessionApi', () => {
+  it('should store token after login', async () => {
+    await sessionApi.login({
+      email: 'test@example.com',
+      password: 'password'
+    })
+    expect(localStorage.getItem('token')).toBeTruthy()
+  })
+})
+```
+
+### 2. Integration Tests
+```javascript
+describe('Protected Route', () => {
+  it('should redirect to login when unauthorized', async () => {
+    localStorage.removeItem('token')
+    const response = await authLoader()
+    expect(response).toEqual(redirect('/login'))
+  })
+})
+```
 
 ## Resources
 
 - [React Router Documentation](https://reactrouter.com)
-- [React Router Tutorial](https://reactrouter.com/en/main/start/tutorial)
-- [React Router GitHub](https://github.com/remix-run/react-router)
+- [JWT.io](https://jwt.io)
+- [Zod Documentation](https://zod.dev)
+- [React Hook Form](https://react-hook-form.com)
