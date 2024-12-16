@@ -4,7 +4,7 @@ This repository serves as a comprehensive, step-by-step guide for building moder
 
 ## Repository Structure
 
-Each branch is numbered in sequential order (1, 2, 3, etc.) and builds upon the concepts introduced in previous branches. Every branch contains:
+Each branch is numbered in sequential order and builds upon the concepts introduced in previous branches. Every branch contains:
 - A detailed README explaining the concepts
 - Implementation examples
 - Step-by-step instructions
@@ -12,50 +12,81 @@ Each branch is numbered in sequential order (1, 2, 3, etc.) and builds upon the 
 
 ## Branches Overview
 
-1. **01-project-setup**
-   - Basic React project setup
-   - Project structure
+1. **todo-setup-project-1**
+   - Basic React project setup with Vite
+   - Project structure organization
    - Development environment configuration
+   - Initial dependencies setup
 
-2. **02-routing**
-   - React Router implementation
-   - Route configuration
-   - Protected routes
-   - Navigation patterns
+2. **todo-setup-api-2**
+   - API structure setup
+   - API client configuration
+   - Environment variables
+   - Base API utilities
 
-3. **03-styling**
-   - CSS Modules
-   - Styling best practices
-   - Theme implementation
-   - Responsive design
+3. **todo-components-3**
+   - Component architecture
+   - Basic UI components
+   - Component composition
+   - Props and component communication
 
-4. **04-forms**
+4. **todo-hooks-4**
+   - React hooks fundamentals
+   - useState and useEffect
+   - Component lifecycle
+   - State management basics
+
+5. **todo-custom-hooks-5**
+   - Custom hooks creation
+   - Hook composition
+   - Reusable logic
+   - Hook best practices
+
+6. **todo-form-6**
    - Form handling
-   - Form validation
-   - Error handling
-   - User input management
+   - Controlled components
+   - Form state management
+   - User input handling
 
-5. **05-api-integration**
+7. **todo-form-validation-7**
+   - Form validation implementation
+   - Error handling
+   - Validation schemas
+   - User feedback
+
+8. **todo-use-api-8**
    - API integration
    - HTTP requests
-   - Error handling
    - Loading states
+   - Error handling
 
-6. **06-authentication**
-   - User authentication
-   - JWT handling
-   - Protected routes
-   - Session management
+9. **todo-api-validation-9**
+   - API response validation
+   - Data schema validation
+   - Type checking
+   - Runtime validation
 
-7. **07-state-management**
-   - Zustand implementation
-   - State management patterns
-   - Store organization
-   - Async actions
+10. **todo-routing-10**
+    - React Router setup
+    - Route configuration
+    - Navigation
+    - Route parameters
+
+11. **todo-auth-11**
+    - Authentication implementation
+    - JWT handling
+    - Protected routes
+    - Session management
+
+12. **todo-state-manager-12**
+    - Zustand integration
+    - Global state management
+    - Store organization
+    - Async state updates
 
 ## How to Use This Guide
 
-1. Start with branch `01-project-setup`
+1. Start with branch `todo-setup-project-1`
 2. Read the README in each branch before proceeding
 3. Follow the implementation steps
 4. Experiment with the code
@@ -68,7 +99,7 @@ Each branch is numbered in sequential order (1, 2, 3, etc.) and builds upon the 
 git clone [repository-url]
 
 # Check out the first branch
-git checkout 01-project-setup
+git checkout todo-setup-project-1
 
 # Install dependencies
 npm install
