@@ -1,97 +1,80 @@
-# React Hook Form Guide
+# Todo Application with Zod Validation
 
-## Overview
+## What is Zod?
 
-React Hook Form is a performant, flexible and extensible forms library with easy-to-use validation. It reduces the amount of code you need to write while removing unnecessary re-renders.
+Zod is a TypeScript-first schema declaration and validation library. It lets you create schemas for data validation with a fluent API that's both type-safe and runtime-safe.
 
-### Key Features
+### Key Features of Zod
 
-- **Performance**: Minimizes re-renders and optimizes validation
-- **Easy to Use**: Simple API with hook-based approach
-- **Form State**: Built-in form state management
-- **Validation**: Supports both built-in and custom validation rules
-- **TypeScript Support**: Full TypeScript support out of the box
+- **TypeScript-first**: Automatically infers TypeScript types from your schemas
+- **Runtime validation**: Validates data at runtime, not just during compilation
+- **Composable**: Build complex schemas from simple ones
+- **Zero dependencies**: Lightweight and efficient
+- **Rich error handling**: Detailed error messages and customizable error maps
 
-## Installation
+## Getting Started
+
+### 1. Installation
 
 ```bash
-npm install react-hook-form
+npm install zod @hookform/resolvers
 ```
 
-## Basic Usage
+### 2. Basic Schema Creation
 
-### Step 1: Simple Form Setup
+```javascript
+import { z } from 'zod'
 
-```jsx
+// Simple string schema
+const stringSchema = z.string()
+
+// Object schema
+const userSchema = z.object({
+  username: z.string().min(3),
+  age: z.number().min(18)
+})
+
+// Array schema
+const listSchema = z.array(z.string())
+```
+
+### 3. Common Validators
+
+```javascript
+const schema = z.string()
+  .min(3, 'Must be at least 3 characters')
+  .max(50, 'Must be less than 50 characters')
+  .email('Invalid email format')
+  .url('Invalid URL')
+  .regex(/pattern/, 'Custom error message')
+  .transform(value => value.toLowerCase())
+```
+
+### 4. Integration with React Hook Form
+
+```javascript
 import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 
-function SimpleForm() {
-  const { register, handleSubmit } = useForm()
-  
-  const onSubmit = (data) => console.log(data)
+const formSchema = z.object({
+  title: z.string()
+    .min(3, 'Title must be at least 3 characters')
+    .max(50, 'Title must be less than 50 characters')
+})
 
-  return (
-    <form onSubmit={handleSubmit(onSubmit)}>
-      <input {...register('firstName')} />
-      <input {...register('lastName')} />
-      <button type="submit">Submit</button>
-    </form>
-  )
-}
-```
-
-### Step 2: Adding Validation
-
-```jsx
-function FormWithValidation() {
+function Form() {
   const {
     register,
     handleSubmit,
     formState: { errors }
-  } = useForm()
-
-  return (
-    <form onSubmit={handleSubmit(onSubmit)}>
-      <input
-        {...register('firstName', {
-          required: 'First name is required',
-          minLength: {
-            value: 2,
-            message: 'Min length is 2'
-          }
-        })}
-      />
-      {errors.firstName && <span>{errors.firstName.message}</span>}
-    </form>
-  )
-}
-```
-
-### Step 3: Form State Management
-
-```jsx
-function FormWithState() {
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting, isDirty, isValid },
-    reset
   } = useForm({
-    mode: 'onChange'
+    resolver: zodResolver(formSchema)
   })
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
-      <input {...register('email')} />
-      <button
-        type="submit"
-        disabled={!isDirty || !isValid || isSubmitting}
-      >
-        Submit
-      </button>
-      <button type="button" onClick={() => reset()}>
-        Reset
-      </button>
+      <input {...register('title')} />
+      {errors.title && <span>{errors.title.message}</span>}
     </form>
   )
 }
@@ -99,227 +82,90 @@ function FormWithState() {
 
 ## Advanced Features
 
-### 1. Watch Form Values
+### 1. Custom Error Messages
 
-```jsx
-function WatchedForm() {
-  const { register, watch } = useForm()
-  const watchedValue = watch('fieldName')
-
-  return (
-    <div>
-      <input {...register('fieldName')} />
-      <p>Current value: {watchedValue}</p>
-    </div>
-  )
-}
+```javascript
+const schema = z.object({
+  password: z.string()
+    .min(8, {
+      message: 'Password must be at least 8 characters long'
+    })
+    .regex(/[A-Z]/, {
+      message: 'Password must contain at least one uppercase letter'
+    })
+})
 ```
 
-### 2. Custom Validation
+### 2. Transformations
 
-```jsx
-function CustomValidationForm() {
-  const { register } = useForm()
-
-  return (
-    <input
-      {...register('custom', {
-        validate: {
-          positive: v => parseInt(v) > 0 || 'Should be positive',
-          lessThanTen: v => parseInt(v) < 10 || 'Should be less than 10',
-          checkUrl: async value => {
-            const response = await fetch(`/api/check/${value}`)
-            return response.ok || 'URL already exists'
-          }
-        }
-      })}
-    />
-  )
-}
+```javascript
+const schema = z.string().transform(str => str.toLowerCase())
 ```
 
-### 3. Form Arrays
+### 3. Optional and Nullable Fields
 
-```jsx
-function DynamicForm() {
-  const { control } = useForm()
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: 'items'
-  })
+```javascript
+const schema = z.object({
+  required: z.string(),
+  optional: z.string().optional(), // undefined is valid
+  nullable: z.string().nullable(), // null is valid
+})
+```
 
-  return (
-    <form>
-      {fields.map((field, index) => (
-        <div key={field.id}>
-          <input {...register(`items.${index}.name`)} />
-          <button type="button" onClick={() => remove(index)}>
-            Delete
-          </button>
-        </div>
-      ))}
-      <button type="button" onClick={() => append({ name: '' })}>
-        Add Item
-      </button>
-    </form>
-  )
-}
+### 4. Union Types
+
+```javascript
+const schema = z.union([
+  z.string(),
+  z.number()
+])
 ```
 
 ## Best Practices
 
-1. **Default Values**
-```jsx
-const { register } = useForm({
-  defaultValues: {
-    firstName: '',
-    lastName: '',
-    email: ''
-  }
+1. **Reuse Schemas**: Create base schemas and extend them for specific use cases
+```javascript
+const baseUserSchema = z.object({
+  id: z.string(),
+  email: z.string().email()
 })
-```
 
-2. **Mode Configuration**
-```jsx
-const { register } = useForm({
-  mode: 'onChange', // validate on change
-  reValidateMode: 'onBlur', // revalidate on blur
-})
-```
-
-3. **Error Handling**
-```jsx
-const {
-  formState: { errors },
-  setError
-} = useForm()
-
-// Custom error setting
-setError('fieldName', {
-  type: 'custom',
-  message: 'Custom error message'
-})
-```
-
-## Real-World Example: Todo Form
-
-```jsx
-import { useForm } from 'react-hook-form'
-
-const TodoForm = ({ onSubmit }) => {
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitting }
-  } = useForm({
-    defaultValues: {
-      title: '',
-      priority: 'medium',
-      dueDate: new Date().toISOString().split('T')[0]
-    }
+const fullUserSchema = baseUserSchema.extend({
+  profile: z.object({
+    name: z.string(),
+    age: z.number()
   })
+})
+```
 
-  const onFormSubmit = async (data) => {
-    try {
-      await onSubmit(data)
-      reset()
-    } catch (error) {
-      setError('root', {
-        type: 'custom',
-        message: 'Failed to create todo'
-      })
-    }
+2. **Custom Refinements**: Add custom validation logic
+```javascript
+const schema = z.string().refine(
+  (val) => val.length > 10,
+  { message: 'String must be longer than 10 characters' }
+)
+```
+
+3. **Error Handling**: Always handle validation errors gracefully
+```javascript
+try {
+  const result = schema.parse(data)
+} catch (error) {
+  if (error instanceof z.ZodError) {
+    console.log(error.errors)
   }
-
-  return (
-    <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-4">
-      <div>
-        <input
-          {...register('title', {
-            required: 'Title is required',
-            minLength: {
-              value: 3,
-              message: 'Title must be at least 3 characters'
-            }
-          })}
-          placeholder="What needs to be done?"
-          className="w-full px-4 py-2 border rounded"
-        />
-        {errors.title && (
-          <span className="text-red-500 text-sm">
-            {errors.title.message}
-          </span>
-        )}
-      </div>
-
-      <div>
-        <select
-          {...register('priority')}
-          className="w-full px-4 py-2 border rounded"
-        >
-          <option value="low">Low</option>
-          <option value="medium">Medium</option>
-          <option value="high">High</option>
-        </select>
-      </div>
-
-      <div>
-        <input
-          type="date"
-          {...register('dueDate')}
-          className="w-full px-4 py-2 border rounded"
-        />
-      </div>
-
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="w-full px-4 py-2 bg-blue-500 text-white rounded"
-      >
-        {isSubmitting ? 'Adding...' : 'Add Todo'}
-      </button>
-    </form>
-  )
 }
 ```
 
-## Performance Tips
+## Common Gotchas
 
-1. **Use FormProvider for Complex Forms**
-```jsx
-import { FormProvider, useForm } from 'react-hook-form'
+1. **Type Inference**: Remember that TypeScript types are only available during development
+2. **Async Validation**: Use `.refine()` with async functions for server-side validation
+3. **Performance**: Complex schemas with many refinements can impact performance
+4. **Bundle Size**: Import only needed validators to keep bundle size small
 
-function App() {
-  const methods = useForm()
-  return (
-    <FormProvider {...methods}>
-      <form>{/* form fields */}</form>
-    </FormProvider>
-  )
-}
-```
+## Resources
 
-2. **Avoid Unnecessary Re-renders**
-```jsx
-// Good
-const { register } = useForm()
-<input {...register('fieldName')} />
-
-// Bad
-<input onChange={e => setValue('fieldName', e.target.value)} />
-```
-
-3. **Use Controller for Complex Inputs**
-```jsx
-import { Controller } from 'react-hook-form'
-
-function App() {
-  return (
-    <Controller
-      name="select"
-      control={control}
-      render={({ field }) => <Select {...field} />}
-    />
-  )
-}
+- [Zod Documentation](https://zod.dev/)
+- [React Hook Form with Zod](https://react-hook-form.com/get-started#SchemaValidation)
+- [TypeScript Integration](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-4-9.html#zod)

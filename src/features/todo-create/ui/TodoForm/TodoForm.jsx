@@ -1,4 +1,6 @@
 import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { todoSchema } from '@entities/todo/model/schema'
 import { useKeyPress } from '@shared/lib/hooks/useKeyPress'
 
 const TodoForm = ({ onSubmit }) => {
@@ -8,6 +10,7 @@ const TodoForm = ({ onSubmit }) => {
     reset,
     formState: { errors }
   } = useForm({
+    resolver: zodResolver(todoSchema),
     defaultValues: {
       title: ''
     }
@@ -26,13 +29,7 @@ const TodoForm = ({ onSubmit }) => {
       <div className="flex-1">
         <input
           type="text"
-          {...register('title', { 
-            required: 'Title is required',
-            minLength: {
-              value: 3,
-              message: 'Title must be at least 3 characters'
-            }
-          })}
+          {...register('title')}
           placeholder="What needs to be done?"
           className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
