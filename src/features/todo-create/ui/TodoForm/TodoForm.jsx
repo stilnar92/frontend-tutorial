@@ -1,20 +1,23 @@
-import { useForm } from '@shared/lib/hooks/useForm'
+import { useForm } from 'react-hook-form'
 import { useKeyPress } from '@shared/lib/hooks/useKeyPress'
 
 const TodoForm = ({ onSubmit }) => {
   const {
-    values,
-    errors,
-    handleChange,
+    register,
     handleSubmit,
-    reset
-  } = useForm({ title: '' })
+    reset,
+    formState: { errors }
+  } = useForm({
+    defaultValues: {
+      title: ''
+    }
+  })
 
   // Clear form with Escape key
   useKeyPress('Escape', reset)
 
-  const onFormSubmit = (formValues) => {
-    onSubmit(formValues.title)
+  const onFormSubmit = (data) => {
+    onSubmit(data.title)
     reset()
   }
 
@@ -23,14 +26,18 @@ const TodoForm = ({ onSubmit }) => {
       <div className="flex-1">
         <input
           type="text"
-          name="title"
-          value={values.title}
-          onChange={handleChange}
+          {...register('title', { 
+            required: 'Title is required',
+            minLength: {
+              value: 3,
+              message: 'Title must be at least 3 characters'
+            }
+          })}
           placeholder="What needs to be done?"
           className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         {errors.title && (
-          <span className="text-red-500 text-sm">{errors.title}</span>
+          <span className="text-red-500 text-sm">{errors.title.message}</span>
         )}
       </div>
       <button

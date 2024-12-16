@@ -1,907 +1,325 @@
-# React Hooks Guide
+# React Hook Form Guide
 
-A comprehensive guide to React hooks, their usage patterns, and best practices.
+## Overview
 
-## Core Hooks
+React Hook Form is a performant, flexible and extensible forms library with easy-to-use validation. It reduces the amount of code you need to write while removing unnecessary re-renders.
 
-### 1. useState
-```jsx
-const [state, setState] = useState(initialValue)
+### Key Features
+
+- **Performance**: Minimizes re-renders and optimizes validation
+- **Easy to Use**: Simple API with hook-based approach
+- **Form State**: Built-in form state management
+- **Validation**: Supports both built-in and custom validation rules
+- **TypeScript Support**: Full TypeScript support out of the box
+
+## Installation
+
+```bash
+npm install react-hook-form
 ```
 
-**Use Cases:**
-- Managing form inputs
-- Toggle states (show/hide)
-- Counter values
-- Any simple state
+## Basic Usage
 
-**Best Practices:**
+### Step 1: Simple Form Setup
+
 ```jsx
-// With primitive value
-const [count, setCount] = useState(0)
-setCount(count + 1)
+import { useForm } from 'react-hook-form'
 
-// With object
-const [user, setUser] = useState({ name: '', age: 0 })
-setUser(prev => ({ ...prev, name: 'John' }))
-
-// With array
-const [items, setItems] = useState([])
-setItems(prev => [...prev, newItem])
-```
-
-### 2. useEffect
-```jsx
-useEffect(() => {
-  // Effect code
-  return () => {
-    // Cleanup code
-  }
-}, [dependencies])
-```
-
-**Use Cases:**
-- Data fetching
-- Subscriptions
-- DOM manipulations
-- Side effects
-
-**Patterns:**
-```jsx
-// Run once on mount
-useEffect(() => {
-  // Effect code
-}, [])
-
-// Run on dependency change
-useEffect(() => {
-  // Effect code
-}, [dependency])
-
-// Cleanup pattern
-useEffect(() => {
-  const subscription = subscribe()
-  return () => unsubscribe(subscription)
-}, [])
-```
-
-### 3. useCallback
-```jsx
-const memoizedCallback = useCallback(
-  () => {
-    doSomething(dependency)
-  },
-  [dependency]
-)
-```
-
-**Use Cases:**
-- Memoizing event handlers
-- Callbacks passed to optimized child components
-- Preventing infinite loops in useEffect
-
-**Example:**
-```jsx
-const handleSubmit = useCallback((value) => {
-  setItems(prev => [...prev, value])
-}, []) // Empty deps if not using any external values
-```
-
-### 4. useMemo
-```jsx
-const memoizedValue = useMemo(
-  () => computeExpensiveValue(dependency),
-  [dependency]
-)
-```
-
-**Use Cases:**
-- Expensive calculations
-- Preventing unnecessary re-renders
-- Memoizing objects for useEffect dependencies
-
-**Example:**
-```jsx
-const sortedItems = useMemo(() => {
-  return items.sort((a, b) => b.priority - a.priority)
-}, [items])
-```
-
-### 5. useRef
-```jsx
-const refContainer = useRef(initialValue)
-```
-
-**Use Cases:**
-- Storing mutable values
-- DOM element references
-- Previous value storage
-
-**Examples:**
-```jsx
-// DOM reference
-const inputRef = useRef(null)
-<input ref={inputRef} />
-
-// Storing previous value
-const prevCount = useRef()
-useEffect(() => {
-  prevCount.current = count
-}, [count])
-```
-
-## Custom Hooks
-
-### Creating Custom Hooks
-```jsx
-function useFormInput(initialValue) {
-  const [value, setValue] = useState(initialValue)
+function SimpleForm() {
+  const { register, handleSubmit } = useForm()
   
-  const handleChange = useCallback((e) => {
-    setValue(e.target.value)
-  }, [])
-  
-  return {
-    value,
-    onChange: handleChange
-  }
-}
+  const onSubmit = (data) => console.log(data)
 
-// Usage
-function Form() {
-  const nameInput = useFormInput('')
-  return <input {...nameInput} />
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <input {...register('firstName')} />
+      <input {...register('lastName')} />
+      <button type="submit">Submit</button>
+    </form>
+  )
 }
 ```
 
-### Common Custom Hooks
+### Step 2: Adding Validation
 
-**1. useToggle**
 ```jsx
-function useToggle(initialValue = false) {
-  const [value, setValue] = useState(initialValue)
-  const toggle = useCallback(() => {
-    setValue(v => !v)
-  }, [])
-  
-  return [value, toggle]
+function FormWithValidation() {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors }
+  } = useForm()
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <input
+        {...register('firstName', {
+          required: 'First name is required',
+          minLength: {
+            value: 2,
+            message: 'Min length is 2'
+          }
+        })}
+      />
+      {errors.firstName && <span>{errors.firstName.message}</span>}
+    </form>
+  )
 }
 ```
 
-**2. useLocalStorage**
+### Step 3: Form State Management
+
 ```jsx
-function useLocalStorage(key, initialValue) {
-  const [storedValue, setStoredValue] = useState(() => {
-    try {
-      const item = window.localStorage.getItem(key)
-      return item ? JSON.parse(item) : initialValue
-    } catch (error) {
-      return initialValue
-    }
+function FormWithState() {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting, isDirty, isValid },
+    reset
+  } = useForm({
+    mode: 'onChange'
   })
 
-  const setValue = useCallback((value) => {
-    try {
-      setStoredValue(value)
-      window.localStorage.setItem(key, JSON.stringify(value))
-    } catch (error) {
-      console.error(error)
-    }
-  }, [key])
-
-  return [storedValue, setValue]
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <input {...register('email')} />
+      <button
+        type="submit"
+        disabled={!isDirty || !isValid || isSubmitting}
+      >
+        Submit
+      </button>
+      <button type="button" onClick={() => reset()}>
+        Reset
+      </button>
+    </form>
+  )
 }
 ```
 
-## React Custom Hooks Implementation Guide
+## Advanced Features
 
-This guide demonstrates the implementation of custom React hooks for a Todo application, following best practices and Feature-Sliced Design principles.
+### 1. Watch Form Values
 
-## Custom Hooks Overview
+```jsx
+function WatchedForm() {
+  const { register, watch } = useForm()
+  const watchedValue = watch('fieldName')
 
-### 1. useLocalStorage Hook
-A hook for persisting state in localStorage.
-
-```javascript
-const [value, setValue] = useLocalStorage('key', initialValue)
+  return (
+    <div>
+      <input {...register('fieldName')} />
+      <p>Current value: {watchedValue}</p>
+    </div>
+  )
+}
 ```
 
-Key features:
-- Automatic JSON serialization/deserialization
-- Error handling for localStorage operations
-- Type-safe value management
+### 2. Custom Validation
 
-### 2. useTodos Hook
-Manages todo state with localStorage persistence.
+```jsx
+function CustomValidationForm() {
+  const { register } = useForm()
 
-```javascript
-const { todos, addTodo, toggleTodo, deleteTodo, clearCompleted } = useTodos()
+  return (
+    <input
+      {...register('custom', {
+        validate: {
+          positive: v => parseInt(v) > 0 || 'Should be positive',
+          lessThanTen: v => parseInt(v) < 10 || 'Should be less than 10',
+          checkUrl: async value => {
+            const response = await fetch(`/api/check/${value}`)
+            return response.ok || 'URL already exists'
+          }
+        }
+      })}
+    />
+  )
+}
 ```
 
-Key features:
-- CRUD operations for todos
-- Persistent storage
-- Memoized operations
+### 3. Form Arrays
 
-### 3. useForm Hook
-Handles form state and validation.
+```jsx
+function DynamicForm() {
+  const { control } = useForm()
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: 'items'
+  })
 
-```javascript
-const { values, errors, handleChange, handleSubmit, reset } = useForm(initialValues)
+  return (
+    <form>
+      {fields.map((field, index) => (
+        <div key={field.id}>
+          <input {...register(`items.${index}.name`)} />
+          <button type="button" onClick={() => remove(index)}>
+            Delete
+          </button>
+        </div>
+      ))}
+      <button type="button" onClick={() => append({ name: '' })}>
+        Add Item
+      </button>
+    </form>
+  )
+}
 ```
-
-Key features:
-- Form state management
-- Validation handling
-- Form reset functionality
-
-### 4. useKeyPress Hook
-Manages keyboard shortcuts.
-
-```javascript
-useKeyPress('c', callback, dependencies)
-```
-
-Key features:
-- Keyboard event handling
-- Support for modifier keys
-- Automatic cleanup
-
-## Step-by-Step Implementation Guide
-
-### Step 1: Create useLocalStorage Hook
-
-1. Create `src/shared/lib/hooks/useLocalStorage.js`
-2. Implement storage operations with error handling
-3. Add JSON parsing/stringifying
-4. Implement state synchronization
-
-### Step 2: Create useTodos Hook
-
-1. Create `src/entities/todo/model/hooks/useTodos.js`
-2. Use useLocalStorage for persistence
-3. Implement CRUD operations
-4. Add memoization for performance
-
-### Step 3: Create useForm Hook
-
-1. Create `src/shared/lib/hooks/useForm.js`
-2. Implement form state management
-3. Add validation logic
-4. Add reset functionality
-
-### Step 4: Create useKeyPress Hook
-
-1. Create `src/shared/lib/hooks/useKeyPress.js`
-2. Implement keyboard event listeners
-3. Add cleanup on unmount
-4. Support modifier keys
-
-### Step 5: Integrate Hooks
-
-1. Update TodoForm to use useForm
-2. Update TodoApp to use useTodos
-3. Add keyboard shortcuts using useKeyPress
-4. Test all functionality
 
 ## Best Practices
 
-1. **Separation of Concerns**
-   - Keep hooks focused on single responsibility
-   - Follow Feature-Sliced Design principles
+1. **Default Values**
+```jsx
+const { register } = useForm({
+  defaultValues: {
+    firstName: '',
+    lastName: '',
+    email: ''
+  }
+})
+```
 
-2. **Performance**
-   - Use useCallback for handlers
-   - Implement proper dependencies
-   - Memoize where necessary
+2. **Mode Configuration**
+```jsx
+const { register } = useForm({
+  mode: 'onChange', // validate on change
+  reValidateMode: 'onBlur', // revalidate on blur
+})
+```
 
 3. **Error Handling**
-   - Handle localStorage errors
-   - Validate form inputs
-   - Provide meaningful error messages
-
-4. **Type Safety**
-   - Use consistent data structures
-   - Validate input/output types
-   - Handle edge cases
-
-## Usage Examples
-
-### Using useLocalStorage
-```javascript
-const [todos, setTodos] = useLocalStorage('todos', [])
-```
-
-### Using useTodos
-```javascript
-const { todos, addTodo } = useTodos()
-addTodo('New Task')
-```
-
-### Using useForm
-```javascript
-const { values, handleSubmit } = useForm({ title: '' })
-```
-
-### Using useKeyPress
-```javascript
-useKeyPress('Escape', () => reset())
-```
-
-## Testing
-
-1. Test hook initialization
-2. Test state updates
-3. Test error scenarios
-4. Test cleanup functions
-
-## Troubleshooting
-
-Common issues and solutions:
-- localStorage quota exceeded
-- JSON parsing errors
-- Event listener cleanup
-- Form validation errors
-
-## React Hooks Implementation Guide
-
-## Table of Contents
-1. [Core Hooks Overview](#core-hooks-overview)
-2. [Step-by-Step Implementation](#step-by-step-implementation)
-3. [Debugging Guide](#debugging-guide)
-
-## Step-by-Step Implementation
-
-### Step 1: Setting up TodoApp State
 ```jsx
-// src/widgets/todo/ui/TodoApp/TodoApp.jsx
-import { useState, useCallback } from 'react'
-import TodoList from '@features/todo-list/ui/TodoList'
-import TodoForm from '@features/todo-create/ui/TodoForm'
+const {
+  formState: { errors },
+  setError
+} = useForm()
 
-const TodoApp = () => {
-  // 1. Initialize todos state
-  const [todos, setTodos] = useState([])
-
-  // 2. Create handler for adding todos
-  const handleSubmit = useCallback((title) => {
-    const newTodo = {
-      id: Date.now(),
-      title,
-      completed: false
-    }
-    setTodos(prev => [...prev, newTodo])
-  }, [])
-
-  // 3. Create handler for toggling todos
-  const handleToggle = useCallback((id) => {
-    setTodos(prev => prev.map(todo => 
-      todo.id === id ? { ...todo, completed: !todo.completed } : todo
-    ))
-  }, [])
-
-  // 4. Create handler for deleting todos
-  const handleDelete = useCallback((id) => {
-    setTodos(prev => prev.filter(todo => todo.id !== id))
-  }, [])
-
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">Todo App</h1>
-      <TodoForm onSubmit={handleSubmit} />
-      <TodoList
-        todos={todos}
-        onToggle={handleToggle}
-        onDelete={handleDelete}
-      />
-    </div>
-  )
-}
+// Custom error setting
+setError('fieldName', {
+  type: 'custom',
+  message: 'Custom error message'
+})
 ```
 
-### Step 2: Implementing Form State
+## Real-World Example: Todo Form
+
 ```jsx
-// src/features/todo-create/ui/TodoForm/TodoForm.jsx
-import { useState, useCallback } from 'react'
+import { useForm } from 'react-hook-form'
 
 const TodoForm = ({ onSubmit }) => {
-  // 1. Initialize form state
-  const [title, setTitle] = useState('')
-
-  // 2. Create submit handler
-  const handleSubmit = useCallback((e) => {
-    e.preventDefault()
-    if (!title.trim()) return
-    
-    onSubmit(title)
-    setTitle('') // Reset form after submission
-  }, [title, onSubmit])
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <input
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        placeholder="What needs to be done?"
-      />
-      <button type="submit">Add Todo</button>
-    </form>
-  )
-}
-```
-
-### Step 3: Optimizing TodoList with memo
-```jsx
-// src/features/todo-list/ui/TodoList/TodoList.jsx
-import { memo } from 'react'
-import TodoItem from '@entities/todo/ui/TodoItem'
-
-// Wrap component with memo to prevent unnecessary re-renders
-const TodoList = memo(({ todos, onToggle, onDelete }) => {
-  if (todos.length === 0) {
-    return <div>No todos yet!</div>
-  }
-
-  return (
-    <div>
-      {todos.map(todo => (
-        <TodoItem
-          key={todo.id}
-          todo={todo}
-          onToggle={onToggle}
-          onDelete={onDelete}
-        />
-      ))}
-    </div>
-  )
-})
-```
-
-### Step 4: Creating Optimized TodoItem
-```jsx
-// src/entities/todo/ui/TodoItem/TodoItem.jsx
-import { memo } from 'react'
-
-const TodoItem = memo(({ todo, onToggle, onDelete }) => {
-  return (
-    <div className="flex items-center gap-4">
-      <input
-        type="checkbox"
-        checked={todo.completed}
-        onChange={() => onToggle(todo.id)}
-      />
-      <span className={todo.completed ? 'line-through' : ''}>
-        {todo.title}
-      </span>
-      <button onClick={() => onDelete(todo.id)}>
-        Delete
-      </button>
-    </div>
-  )
-})
-```
-
-### Step 5: Adding Custom Hooks (Optional)
-
-#### useLocalTodos Hook
-```jsx
-// src/entities/todo/model/hooks/useLocalTodos.js
-import { useState, useCallback } from 'react'
-
-export const useLocalTodos = () => {
-  const [todos, setTodos] = useState(() => {
-    // Initialize from localStorage if available
-    const saved = localStorage.getItem('todos')
-    return saved ? JSON.parse(saved) : []
-  })
-
-  // Save to localStorage whenever todos change
-  useEffect(() => {
-    localStorage.setItem('todos', JSON.stringify(todos))
-  }, [todos])
-
-  const addTodo = useCallback((title) => {
-    const newTodo = {
-      id: Date.now(),
-      title,
-      completed: false
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting }
+  } = useForm({
+    defaultValues: {
+      title: '',
+      priority: 'medium',
+      dueDate: new Date().toISOString().split('T')[0]
     }
-    setTodos(prev => [...prev, newTodo])
-  }, [])
-
-  const toggleTodo = useCallback((id) => {
-    setTodos(prev => prev.map(todo => 
-      todo.id === id ? { ...todo, completed: !todo.completed } : todo
-    ))
-  }, [])
-
-  const deleteTodo = useCallback((id) => {
-    setTodos(prev => prev.filter(todo => todo.id !== id))
-  }, [])
-
-  return {
-    todos,
-    addTodo,
-    toggleTodo,
-    deleteTodo
-  }
-}
-```
-
-### Step 6: Using Custom Hook in TodoApp
-```jsx
-// src/widgets/todo/ui/TodoApp/TodoApp.jsx
-import { useLocalTodos } from '@entities/todo/model/hooks/useLocalTodos'
-
-const TodoApp = () => {
-  const { todos, addTodo, toggleTodo, deleteTodo } = useLocalTodos()
-
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">Todo App</h1>
-      <TodoForm onSubmit={addTodo} />
-      <TodoList
-        todos={todos}
-        onToggle={toggleTodo}
-        onDelete={deleteTodo}
-      />
-    </div>
-  )
-}
-```
-
-## Implementation Tips
-
-### 1. State Management
-- Keep state at the highest necessary level
-- Use `useState` for simple state
-- Consider custom hooks for complex state logic
-
-### 2. Performance Optimization
-- Memoize callbacks with `useCallback`
-- Memoize components with `memo`
-- Use `useMemo` for expensive calculations
-
-### 3. Event Handlers
-- Define handlers with `useCallback`
-- Pass handlers down as props
-- Keep handler logic simple and focused
-
-### 4. Props
-- Pass minimal necessary props
-- Use proper prop naming (onEvent for handlers)
-- Destructure props for clarity
-
-## Testing Implementation
-
-### 1. Component Testing
-```jsx
-import { render, fireEvent } from '@testing-library/react'
-
-test('TodoForm submits new todo', () => {
-  const onSubmit = jest.fn()
-  const { getByPlaceholderText, getByText } = render(
-    <TodoForm onSubmit={onSubmit} />
-  )
-
-  const input = getByPlaceholderText('What needs to be done?')
-  fireEvent.change(input, { target: { value: 'New Todo' } })
-  fireEvent.click(getByText('Add Todo'))
-
-  expect(onSubmit).toHaveBeenCalledWith('New Todo')
-})
-```
-
-### 2. Hook Testing
-```jsx
-import { renderHook, act } from '@testing-library/react-hooks'
-
-test('useLocalTodos manages todos', () => {
-  const { result } = renderHook(() => useLocalTodos())
-
-  act(() => {
-    result.current.addTodo('Test Todo')
   })
 
-  expect(result.current.todos).toHaveLength(1)
-  expect(result.current.todos[0].title).toBe('Test Todo')
-})
-```
-
-## Debugging Tips
-
-### 1. Component Re-renders
-```jsx
-useEffect(() => {
-  console.log('TodoList rendered with todos:', todos)
-}, [todos])
-```
-
-### 2. State Updates
-```jsx
-useEffect(() => {
-  console.log('Todo added/removed. Current todos:', todos)
-}, [todos.length])
-```
-
-### 3. Performance Issues
-```jsx
-// Add to component to track re-renders
-console.log('TodoItem rendered:', todo.title)
-```
-
-## Common Issues and Solutions
-
-### 1. Infinite Loops
-```jsx
-// ❌ Bad - Causes infinite loop
-useEffect(() => {
-  setTodos([...todos, newTodo])
-}, [todos])
-
-// ✅ Good - Uses functional update
-useEffect(() => {
-  setTodos(prev => [...prev, newTodo])
-}, [newTodo])
-```
-
-### 2. Stale Closures
-```jsx
-// ❌ Bad - Uses stale todos
-const deleteTodo = useCallback((id) => {
-  const filtered = todos.filter(todo => todo.id !== id)
-  setTodos(filtered)
-}, []) // Missing todos dependency
-
-// ✅ Good - Uses functional update
-const deleteTodo = useCallback((id) => {
-  setTodos(prev => prev.filter(todo => todo.id !== id))
-}, []) // No dependencies needed
-```
-
-## Hooks Best Practices
-
-### 1. Rules of Hooks
-- Only call hooks at the top level
-- Only call hooks from React functions
-- Use the exhaustive-deps ESLint rule
-
-### 2. Dependencies
-```jsx
-// ❌ Bad - missing dependency
-useEffect(() => {
-  setFullName(firstName + ' ' + lastName)
-}, []) // Missing firstName, lastName
-
-// ✅ Good - all dependencies included
-useEffect(() => {
-  setFullName(firstName + ' ' + lastName)
-}, [firstName, lastName])
-```
-
-### 3. State Updates
-```jsx
-// ❌ Bad - multiple state updates
-setCount(count + 1)
-setCount(count + 1)
-
-// ✅ Good - functional update
-setCount(prev => prev + 1)
-setCount(prev => prev + 1)
-```
-
-### 4. Effect Cleanup
-```jsx
-// ✅ Good - cleanup pattern
-useEffect(() => {
-  const timer = setInterval(() => {
-    setCount(c => c + 1)
-  }, 1000)
-  
-  return () => clearInterval(timer)
-}, [])
-```
-
-## Debugging Hooks
-
-### 1. Common Issues
-- Infinite re-renders
-- Stale closures
-- Missing dependencies
-- Unnecessary re-renders
-
-### 2. Debugging Techniques
-```jsx
-// Debug re-renders
-useEffect(() => {
-  console.log('Component rendered with:', value)
-}, [value])
-
-// Debug state updates
-const [count, setCount] = useState(0)
-console.log('Current count:', count)
-
-// Debug effect dependencies
-useEffect(() => {
-  console.log('Dependencies changed:', dep1, dep2)
-}, [dep1, dep2])
-
-```
-
-# Custom Hooks Implementation Guide
-
-## Step 1: useLocalStorage Hook
-
-```javascript
-// src/shared/lib/hooks/useLocalStorage.js
-import { useState, useEffect } from 'react'
-
-export const useLocalStorage = (key, initialValue) => {
-  const [value, setValue] = useState(() => {
+  const onFormSubmit = async (data) => {
     try {
-      const item = window.localStorage.getItem(key)
-      return item ? JSON.parse(item) : initialValue
-    } catch (error) {
-      return initialValue
-    }
-  })
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(key, JSON.stringify(value))
-    } catch (error) {
-      console.error(`Error saving to localStorage: ${error}`)
-    }
-  }, [key, value])
-
-  return [value, setValue]
-}
-```
-
-## Step 2: useTodos Hook
-
-```javascript
-// src/entities/todo/model/hooks/useTodos.js
-import { useCallback } from 'react'
-import { useLocalStorage } from '@shared/lib/hooks/useLocalStorage'
-
-export const useTodos = () => {
-  const [todos, setTodos] = useLocalStorage('todos', [])
-
-  const addTodo = useCallback((title) => {
-    setTodos(prev => [...prev, {
-      id: Date.now(),
-      title,
-      completed: false
-    }])
-  }, [setTodos])
-
-  const toggleTodo = useCallback((id) => {
-    setTodos(prev => prev.map(todo => 
-      todo.id === id ? { ...todo, completed: !todo.completed } : todo
-    ))
-  }, [setTodos])
-
-  const deleteTodo = useCallback((id) => {
-    setTodos(prev => prev.filter(todo => todo.id !== id))
-  }, [setTodos])
-
-  const clearCompleted = useCallback(() => {
-    setTodos(prev => prev.filter(todo => !todo.completed))
-  }, [setTodos])
-
-  return { todos, addTodo, toggleTodo, deleteTodo, clearCompleted }
-}
-```
-
-## Step 3: useForm Hook
-
-```javascript
-// src/shared/lib/hooks/useForm.js
-import { useState, useCallback } from 'react'
-
-export const useForm = (initialValues = {}) => {
-  const [values, setValues] = useState(initialValues)
-  const [errors, setErrors] = useState({})
-
-  const handleChange = useCallback((e) => {
-    const { name, value } = e.target
-    setValues(prev => ({ ...prev, [name]: value }))
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }))
-    }
-  }, [errors])
-
-  const handleSubmit = useCallback((onSubmit) => (e) => {
-    e.preventDefault()
-    const newErrors = {}
-    Object.keys(values).forEach(key => {
-      if (!values[key]) {
-        newErrors[key] = 'This field is required'
-      }
-    })
-
-    if (Object.keys(newErrors).length === 0) {
-      onSubmit(values)
-      setValues(initialValues)
-    } else {
-      setErrors(newErrors)
-    }
-  }, [values, initialValues])
-
-  const reset = useCallback(() => {
-    setValues(initialValues)
-    setErrors({})
-  }, [initialValues])
-
-  return { values, errors, handleChange, handleSubmit, reset }
-}
-```
-
-## Step 4: useKeyPress Hook
-
-```javascript
-// src/shared/lib/hooks/useKeyPress.js
-import { useEffect, useCallback } from 'react'
-
-export const useKeyPress = (targetKey, callback, deps = []) => {
-  const handleKeyPress = useCallback((event) => {
-    if (event.key === targetKey) {
-      callback(event)
-    }
-  }, [targetKey, callback])
-
-  useEffect(() => {
-    window.addEventListener('keydown', handleKeyPress)
-    return () => window.removeEventListener('keydown', handleKeyPress)
-  }, [handleKeyPress, ...deps])
-}
-```
-
-## Step 5: Usage in Components
-
-### TodoForm Component
-```javascript
-const TodoForm = ({ onSubmit }) => {
-  const { values, errors, handleChange, handleSubmit, reset } = useForm({ title: '' })
-  useKeyPress('Escape', reset)
-
-  return (
-    <form onSubmit={handleSubmit((values) => {
-      onSubmit(values.title)
+      await onSubmit(data)
       reset()
-    })}>
-      <input
-        name="title"
-        value={values.title}
-        onChange={handleChange}
-        placeholder="What needs to be done?"
-      />
-      {errors.title && <span>{errors.title}</span>}
-      <button type="submit">Add</button>
+    } catch (error) {
+      setError('root', {
+        type: 'custom',
+        message: 'Failed to create todo'
+      })
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-4">
+      <div>
+        <input
+          {...register('title', {
+            required: 'Title is required',
+            minLength: {
+              value: 3,
+              message: 'Title must be at least 3 characters'
+            }
+          })}
+          placeholder="What needs to be done?"
+          className="w-full px-4 py-2 border rounded"
+        />
+        {errors.title && (
+          <span className="text-red-500 text-sm">
+            {errors.title.message}
+          </span>
+        )}
+      </div>
+
+      <div>
+        <select
+          {...register('priority')}
+          className="w-full px-4 py-2 border rounded"
+        >
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+        </select>
+      </div>
+
+      <div>
+        <input
+          type="date"
+          {...register('dueDate')}
+          className="w-full px-4 py-2 border rounded"
+        />
+      </div>
+
+      <button
+        type="submit"
+        disabled={isSubmitting}
+        className="w-full px-4 py-2 bg-blue-500 text-white rounded"
+      >
+        {isSubmitting ? 'Adding...' : 'Add Todo'}
+      </button>
     </form>
   )
 }
 ```
 
-### TodoApp Component
-```javascript
-const TodoApp = () => {
-  const { todos, addTodo, toggleTodo, deleteTodo, clearCompleted } = useTodos()
-  
-  useKeyPress('c', (e) => {
-    if (e.altKey) clearCompleted()
-  })
+## Performance Tips
 
+1. **Use FormProvider for Complex Forms**
+```jsx
+import { FormProvider, useForm } from 'react-hook-form'
+
+function App() {
+  const methods = useForm()
   return (
-    <div>
-      <TodoForm onSubmit={addTodo} />
-      <TodoList
-        todos={todos}
-        onToggle={toggleTodo}
-        onDelete={deleteTodo}
-      />
-      <button onClick={clearCompleted}>Clear Completed (Alt+C)</button>
-    </div>
+    <FormProvider {...methods}>
+      <form>{/* form fields */}</form>
+    </FormProvider>
+  )
+}
+```
+
+2. **Avoid Unnecessary Re-renders**
+```jsx
+// Good
+const { register } = useForm()
+<input {...register('fieldName')} />
+
+// Bad
+<input onChange={e => setValue('fieldName', e.target.value)} />
+```
+
+3. **Use Controller for Complex Inputs**
+```jsx
+import { Controller } from 'react-hook-form'
+
+function App() {
+  return (
+    <Controller
+      name="select"
+      control={control}
+      render={({ field }) => <Select {...field} />}
+    />
   )
 }
