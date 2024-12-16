@@ -1,21 +1,19 @@
 import React, { useEffect } from 'react'
 import { TodoForm } from '@/features/todo-create/ui/TodoForm'
 import { TodoListContainer } from '@/features/todo-list/ui/TodoListContainer'
-import { useTodoList } from '@/entities/todo/hooks/useTodoList'
+import { useTodoStore } from '@/entities/todo/store/todoStore'
 
 export const HomePage = () => {
-  const {
-    todos,
-    isLoading,
-    error,
-    fetchTodos,
-    toggleTodo,
-    deleteTodo
-  } = useTodoList()
+  const todos = useTodoStore((state) => state.todos);
+  const isLoading = useTodoStore((state) => state.isLoading);
+  const error = useTodoStore((state) => state.error);
+  const fetchTodos = useTodoStore((state) => state.fetchTodos);
+  const toggleTodo = useTodoStore((state) => state.toggleTodo);
+  const deleteTodo = useTodoStore((state) => state.deleteTodo);
 
   useEffect(() => {
-    fetchTodos()
-  }, [fetchTodos])
+    fetchTodos();
+  }, [fetchTodos]);
 
   return (
     <div className="container mx-auto px-4 py-8">

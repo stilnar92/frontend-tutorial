@@ -1,37 +1,39 @@
-import React from 'react'
-import { createBrowserRouter, redirect } from 'react-router-dom'
-import { HomePage, LoginPage } from '@/pages'
-import { sessionApi } from '@/entities/session/api/sessionApi'
+import React from 'react';
+import { createBrowserRouter, redirect } from 'react-router-dom';
+import { HomePage, LoginPage } from '@/pages';
+import { useSessionStore } from '@/entities/session/store/sessionStore';
 
 // Auth check loader
-const authLoader = async () => {
-  try {
-    await sessionApi.check()
-    return null
-  } catch (error) {
-    return redirect('/login')
+const protectedLoader = async () => {
+  const checkAuth = useSessionStore.getState().checkAuth;
+  const isAuthenticated = await checkAuth();
+  
+  if (!isAuthenticated) {
+    return redirect('/login');
   }
-}
+  return null;
+};
 
 // Guest loader (for login page)
 const guestLoader = async () => {
-  try {
-    await sessionApi.check()
-    return redirect('/')
-  } catch (error) {
-    return null
+  const checkAuth = useSessionStore.getState().checkAuth;
+  const isAuthenticated = await checkAuth();
+  
+  if (isAuthenticated) {
+    return redirect('/');
   }
-}
+  return null;
+};
 
 export const router = createBrowserRouter([
   {
     path: '/',
     element: <HomePage />,
-    loader: authLoader
+    loader: protectedLoader,
   },
   {
     path: '/login',
     element: <LoginPage />,
-    loader: guestLoader
-  }
-])
+    loader: guestLoader,
+  },
+]);

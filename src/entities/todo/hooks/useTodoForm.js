@@ -1,11 +1,12 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { todoSchema } from '../model/schema'
-import { todoApi } from '../api/todoApi'
 import { useKeyPress } from '@shared/lib/hooks/useKeyPress'
-import { ValidationError } from '@shared/lib/validation/validateApi'
+import { useTodoStore } from '../store/todoStore'
 
-export const useTodoForm = ({ onSuccess } = {}) => {
+export const useTodoForm = () => {
+  const addTodo = useTodoStore((state) => state.addTodo);
+  
   const {
     register,
     handleSubmit,
@@ -25,26 +26,15 @@ export const useTodoForm = ({ onSuccess } = {}) => {
 
   const onSubmit = async (data) => {
     try {
-      await todoApi.createTodo(data)
-      reset()
-      // Remove onSuccess call to prevent automatic todo list refresh
-    } catch (error) {
-      if (error instanceof ValidationError) {
-        // Set form errors from API validation
-        error.errors.forEach(err => {
-          setError(err.path.join('.'), {
-            type: 'server',
-            message: err.message
-          })
-        })
-      } else {
-        // Set generic form error
-        setError('root', {
-          type: 'server',
-          message: error.message || 'Failed to create todo'
-        })
+      const success = await addTodo(data);
+      if (success) {
+        reset();
       }
-      console.error('Form submission error:', error)
+    } catch (error) {
+      setError('root', {
+        type: 'server',
+        message: error.message || 'Failed to create todo'
+      })
     }
   }
 

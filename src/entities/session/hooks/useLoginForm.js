@@ -1,11 +1,12 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { loginSchema } from '../model/schema'
-import { sessionApi } from '../api/sessionApi'
 import { useNavigate } from 'react-router-dom'
+import { useSessionStore } from '../store/sessionStore';
 
 export const useLoginForm = () => {
   const navigate = useNavigate()
+  const login = useSessionStore((state) => state.login);
   const {
     register,
     handleSubmit,
@@ -21,20 +22,28 @@ export const useLoginForm = () => {
 
   const onSubmit = async (data) => {
     try {
-      await sessionApi.login(data)
-      navigate('/')
+      const success = await login(data);
+      if (success) {
+        navigate('/');
+      } else {
+        setError('root', {
+          type: 'server',
+          message: 'Invalid email or password'
+        });
+      }
     } catch (error) {
       setError('root', {
         type: 'server',
-        message: error.message
-      })
+        message: error.message || 'Something went wrong'
+      });
     }
   }
 
   return {
     register,
-    handleSubmit: handleSubmit(onSubmit),
+    handleSubmit,
     errors,
-    isSubmitting
+    isSubmitting,
+    onSubmit
   }
 }

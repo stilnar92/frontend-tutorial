@@ -12,7 +12,7 @@ const todoBase = {
 export const todoItemSchema = z.object({
   ...todoBase,
   id: z.number(),
-  userId: z.number(),
+  userId: z.number().optional(),
 })
 
 // Schema for creating new todos
