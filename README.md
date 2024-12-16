@@ -1,175 +1,244 @@
-# API Setup Guide with Feature-Sliced Design (FSD)
+# React Components Guide with FSD Architecture
 
-This guide explains how to set up API integration following FSD architecture principles.
+This guide explains how to structure React components following Feature-Sliced Design (FSD) principles and React props best practices.
 
-## Prerequisites
+## Component Structure in FSD
 
-- Node.js and npm installed
-- React project with FSD structure
+FSD organizes components into layers:
 
-## Step 1: Install Dependencies
+1. **Entities** - Business objects (e.g., TodoItem)
+2. **Features** - User interactions (e.g., TodoList, TodoForm)
+3. **Widgets** - Complex components combining features (e.g., TodoApp)
+4. **Pages** - Route-level components
+5. **App** - Application initialization
 
-```bash
-# Install Axios for making HTTP requests
-npm install axios
+## Component Setup Steps
+
+### 1. Create Entity Components
+
+Create basic business entity components in `src/entities/{entity}/ui/`:
+
+```jsx
+// src/entities/todo/ui/TodoItem/TodoItem.jsx
+const TodoItem = ({ todo, onToggle, onDelete }) => {
+  return (
+    <div>
+      <input
+        type="checkbox"
+        checked={todo.completed}
+        onChange={() => onToggle(todo.id)}
+      />
+      <span>{todo.title}</span>
+      <button onClick={() => onDelete(todo.id)}>Delete</button>
+    </div>
+  )
+}
 ```
 
-## Step 2: Create Project Structure
+### 2. Create Feature Components
 
-Create the following directory structure:
+Create user interaction components in `src/features/{feature}/ui/`:
+
+```jsx
+// src/features/todo-list/ui/TodoList/TodoList.jsx
+import TodoItem from '@entities/todo/ui/TodoItem'
+
+const TodoList = ({ todos, onToggle, onDelete }) => {
+  return (
+    <div>
+      {todos.map(todo => (
+        <TodoItem
+          key={todo.id}
+          todo={todo}
+          onToggle={onToggle}
+          onDelete={onDelete}
+        />
+      ))}
+    </div>
+  )
+}
+```
+
+### 3. Create Widget Components
+
+Combine features into complex widgets in `src/widgets/{widget}/ui/`:
+
+```jsx
+// src/widgets/todo/ui/TodoApp/TodoApp.jsx
+import TodoList from '@features/todo-list/ui/TodoList'
+import TodoForm from '@features/todo-create/ui/TodoForm'
+
+const TodoApp = () => {
+  return (
+    <div>
+      <TodoForm onSubmit={handleSubmit} />
+      <TodoList
+        todos={todos}
+        onToggle={handleToggle}
+        onDelete={handleDelete}
+      />
+    </div>
+  )
+}
+```
+
+## React Props Guide
+
+### Types of Props
+
+1. **Data Props**
+   ```jsx
+   // Passing data down
+   const TodoItem = ({ todo }) => (
+     <div>{todo.title}</div>
+   )
+   ```
+
+2. **Action Props (Event Handlers)**
+   ```jsx
+   // Handling user interactions
+   const TodoItem = ({ onToggle, onDelete }) => (
+     <div>
+       <button onClick={onToggle}>Toggle</button>
+       <button onClick={onDelete}>Delete</button>
+     </div>
+   )
+   ```
+
+3. **Render Props**
+   ```jsx
+   // Customizing rendering
+   const TodoList = ({ renderItem, todos }) => (
+     <div>
+       {todos.map(todo => renderItem(todo))}
+     </div>
+   )
+   ```
+
+4. **Style Props**
+   ```jsx
+   // Customizing appearance
+   const Button = ({ variant, size, className }) => (
+     <button className={buttonVariants({ variant, size, className })}>
+       Click me
+     </button>
+   )
+   ```
+
+### Props Best Practices
+
+1. **Props Naming**
+   - Use clear, descriptive names
+   - Prefix event handlers with 'on'
+   - Prefix boolean props with 'is', 'has', or 'should'
+
+   ```jsx
+   // Good
+   <TodoItem
+     isCompleted={true}
+     onToggle={handleToggle}
+     onDelete={handleDelete}
+   />
+
+   // Avoid
+   <TodoItem
+     completed={true}
+     toggle={handleToggle}
+     delete={handleDelete}
+   />
+   ```
+
+2. **Props Destructuring**
+   ```jsx
+   // Destructure props in parameters
+   const TodoItem = ({ todo, onToggle, onDelete }) => {
+     // Use props directly
+   }
+
+   // For many props, destructure in function body
+   const ComplexComponent = (props) => {
+     const {
+       prop1,
+       prop2,
+       prop3,
+       // ...more props
+     } = props
+   }
+   ```
+
+3. **Default Props**
+   ```jsx
+   // Set default values in destructuring
+   const TodoItem = ({
+     isCompleted = false,
+     className = '',
+     onToggle = () => {},
+   }) => {
+     // Component code
+   }
+   ```
+
+4. **Props Validation**
+   ```jsx
+   // Document expected props with JSDoc
+   /**
+    * @param {Object} props
+    * @param {Todo} props.todo - Todo item
+    * @param {Function} props.onToggle - Toggle handler
+    * @param {Function} props.onDelete - Delete handler
+    */
+   const TodoItem = ({ todo, onToggle, onDelete }) => {
+     // Component code
+   }
+   ```
+
+## Component Organization
+
 ```
 src/
-├── shared/
-│   └── api/
-│       └── axios.js           # Shared API configuration
-└── entities/
+├── entities/
+│   └── todo/
+│       └── ui/
+│           └── TodoItem/
+│               ├── TodoItem.jsx
+│               └── index.js
+├── features/
+│   ├── todo-list/
+│   │   └── ui/
+│   │       └── TodoList/
+│   │           ├── TodoList.jsx
+│   │           └── index.js
+│   └── todo-create/
+│       └── ui/
+│           └── TodoForm/
+│               ├── TodoForm.jsx
+│               └── index.js
+└── widgets/
     └── todo/
-        ├── api/
-        │   └── todoApi.js     # Todo API methods
-        ├── model/
-        │   ├── types.js       # Todo types
-        │   └── constants.js   # Todo constants
-        └── index.js           # Public API
-```
-
-## Step 3: Configure Base API
-
-Create shared API configuration in `src/shared/api/axios.js`:
-```javascript
-import axios from 'axios'
-
-export const BASE_URL = 'https://jsonplaceholder.typicode.com'
-
-export const axiosInstance = axios.create({
-  baseURL: BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-})
-```
-
-## Step 4: Define Entity Types
-
-Create types in `src/entities/todo/model/types.js`:
-```javascript
-/**
- * @typedef {Object} Todo
- * @property {number} id - Todo ID
- * @property {string} title - Todo title
- * @property {boolean} completed - Todo completion status
- * @property {number} userId - User ID
- */
-
-/**
- * @typedef {Object} CreateTodoDTO
- * @property {string} title - Todo title
- * @property {boolean} completed - Todo completion status
- */
-
-/**
- * @typedef {Object} UpdateTodoDTO
- * @property {string} [title] - Todo title
- * @property {boolean} [completed] - Todo completion status
- */
-```
-
-## Step 5: Define Error Constants
-
-Create constants in `src/entities/todo/model/constants.js`:
-```javascript
-export const TODO_ERRORS = {
-  FETCH_ERROR: 'Failed to fetch todos',
-  CREATE_ERROR: 'Failed to create todo',
-  UPDATE_ERROR: 'Failed to update todo',
-  DELETE_ERROR: 'Failed to delete todo',
-}
-```
-
-## Step 6: Implement API Methods
-
-Create API methods in `src/entities/todo/api/todoApi.js`:
-```javascript
-import { axiosInstance } from '@shared/api/axios'
-
-const ENDPOINTS = {
-  GET_TODOS: '/todos',
-  GET_TODO: (id) => `/todos/${id}`,
-  CREATE_TODO: '/todos',
-  UPDATE_TODO: (id) => `/todos/${id}`,
-  DELETE_TODO: (id) => `/todos/${id}`,
-}
-
-export const todoApi = {
-  async getTodos() {
-    const { data } = await axiosInstance.get(ENDPOINTS.GET_TODOS)
-    return data
-  },
-
-  async getTodoById(id) {
-    const { data } = await axiosInstance.get(ENDPOINTS.GET_TODO(id))
-    return data
-  },
-
-  async createTodo(todo) {
-    const { data } = await axiosInstance.post(ENDPOINTS.CREATE_TODO, todo)
-    return data
-  },
-
-  async updateTodo(id, todo) {
-    const { data } = await axiosInstance.put(ENDPOINTS.UPDATE_TODO(id), todo)
-    return data
-  },
-
-  async deleteTodo(id) {
-    await axiosInstance.delete(ENDPOINTS.DELETE_TODO(id))
-  },
-}
-```
-
-## Step 7: Create Public API
-
-Export entity's public API in `src/entities/todo/index.js`:
-```javascript
-export { todoApi } from './api/todoApi'
-export { TODO_ERRORS } from './model/constants'
-```
-
-## Usage Example
-
-```javascript
-import { todoApi } from '@entities/todo'
-
-// Fetch todos
-const todos = await todoApi.getTodos()
-
-// Create todo
-const newTodo = await todoApi.createTodo({
-  title: 'New Todo',
-  completed: false,
-})
-
-// Update todo
-const updatedTodo = await todoApi.updateTodo(1, {
-  completed: true,
-})
-
-// Delete todo
-await todoApi.deleteTodo(1)
+        └── ui/
+            └── TodoApp/
+                ├── TodoApp.jsx
+                └── index.js
 ```
 
 ## Best Practices
 
-1. **API Organization**:
-   - Keep base API configuration in shared layer
-   - Group related API methods by entity
-   - Use DTOs for request/response typing
+1. **Component Composition**
+   - Keep components focused and single-responsibility
+   - Use composition over inheritance
+   - Break down complex components into smaller ones
 
-2. **Error Handling**:
-   - Define error constants
-   - Handle errors consistently
-   - Use descriptive error messages
+2. **Props Flow**
+   - Pass only necessary props
+   - Avoid prop drilling by using composition
+   - Consider using context for deeply nested data
 
-3. **Code Structure**:
-   - Follow FSD layer isolation
-   - Keep endpoints centralized
-   - Export only necessary methods
+3. **Component Boundaries**
+   - Keep state as close as possible to where it's used
+   - Define clear interfaces between components
+   - Use index files for clean exports
+
+4. **Performance**
+   - Memoize callbacks with useCallback
+   - Memoize expensive computations with useMemo
+   - Use React.memo for pure components
