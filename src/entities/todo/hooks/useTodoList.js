@@ -1,10 +1,21 @@
 import { useState, useCallback } from 'react'
 import { todoApi } from '../api/todoApi'
+import { ValidationError } from '@shared/lib/validation/validateApi'
 
 export const useTodoList = () => {
   const [todos, setTodos] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
+
+  const handleError = (error) => {
+    if (error instanceof ValidationError) {
+      setError('Invalid data received from server')
+      console.error('Validation errors:', error.errors)
+    } else {
+      setError(error.message || 'Failed to fetch todos')
+      console.error('API error:', error)
+    }
+  }
 
   const fetchTodos = useCallback(async () => {
     try {
@@ -13,8 +24,7 @@ export const useTodoList = () => {
       const data = await todoApi.getTodos()
       setTodos(data)
     } catch (error) {
-      setError('Failed to fetch todos')
-      console.error('Error fetching todos:', error)
+      handleError(error)
     } finally {
       setIsLoading(false)
     }
@@ -32,7 +42,7 @@ export const useTodoList = () => {
 
       setTodos(todos.map(t => t.id === id ? updatedTodo : t))
     } catch (error) {
-      console.error('Failed to toggle todo:', error)
+      handleError(error)
     }
   }
 
@@ -41,7 +51,7 @@ export const useTodoList = () => {
       await todoApi.deleteTodo(id)
       setTodos(todos.filter(t => t.id !== id))
     } catch (error) {
-      console.error('Failed to delete todo:', error)
+      handleError(error)
     }
   }
 

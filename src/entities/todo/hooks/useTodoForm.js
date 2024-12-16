@@ -3,12 +3,14 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { todoSchema } from '../model/schema'
 import { todoApi } from '../api/todoApi'
 import { useKeyPress } from '@shared/lib/hooks/useKeyPress'
+import { ValidationError } from '@shared/lib/validation/validateApi'
 
 export const useTodoForm = ({ onSuccess } = {}) => {
   const {
     register,
     handleSubmit,
     reset,
+    setError,
     formState: { errors, isSubmitting }
   } = useForm({
     resolver: zodResolver(todoSchema),
@@ -29,7 +31,22 @@ export const useTodoForm = ({ onSuccess } = {}) => {
         onSuccess()
       }
     } catch (error) {
-      console.error('Failed to create todo:', error)
+      if (error instanceof ValidationError) {
+        // Set form errors from API validation
+        error.errors.forEach(err => {
+          setError(err.path.join('.'), {
+            type: 'server',
+            message: err.message
+          })
+        })
+      } else {
+        // Set generic form error
+        setError('root', {
+          type: 'server',
+          message: error.message || 'Failed to create todo'
+        })
+      }
+      console.error('Form submission error:', error)
     }
   }
 

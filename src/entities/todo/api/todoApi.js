@@ -1,54 +1,63 @@
 import { axiosInstance } from '@shared/api/axios'
+import { validateApiResponse } from '@shared/lib/validation/validateApi'
+import {
+  todoListSchema,
+  todoItemSchema,
+  createTodoSchema,
+  updateTodoSchema
+} from '../model/validation'
 
 const ENDPOINTS = {
   GET_TODOS: '/todos',
   GET_TODO: (id) => `/todos/${id}`,
   CREATE_TODO: '/todos',
   UPDATE_TODO: (id) => `/todos/${id}`,
-  DELETE_TODO: (id) => `/todos/${id}`,
+  DELETE_TODO: (id) => `/todos/${id}`
 }
 
 export const todoApi = {
   /**
    * Get all todos
-   * @returns {Promise<Array>} Array of todos
+   * @returns {Promise<import('zod').infer<typeof todoListSchema>>} Array of todos
    */
   async getTodos() {
     const { data } = await axiosInstance.get(ENDPOINTS.GET_TODOS)
-    return data
+    return validateApiResponse(todoListSchema, data)
   },
 
   /**
    * Get todo by id
    * @param {number} id - Todo ID
-   * @returns {Promise<Object>} Todo object
+   * @returns {Promise<import('zod').infer<typeof todoItemSchema>>} Todo object
    */
   async getTodoById(id) {
     const { data } = await axiosInstance.get(ENDPOINTS.GET_TODO(id))
-    return data
+    return validateApiResponse(todoItemSchema, data)
   },
 
   /**
    * Create new todo
-   * @param {Object} todo - Todo object
-   * @param {string} todo.title - Todo title
-   * @param {boolean} todo.completed - Todo completion status
-   * @returns {Promise<Object>} Created todo object
+   * @param {import('zod').infer<typeof createTodoSchema>} todo - Todo object
+   * @returns {Promise<import('zod').infer<typeof todoItemSchema>>} Created todo object
    */
   async createTodo(todo) {
-    const { data } = await axiosInstance.post(ENDPOINTS.CREATE_TODO, todo)
-    return data
+    // Validate request data
+    const validatedData = createTodoSchema.parse(todo)
+    const { data } = await axiosInstance.post(ENDPOINTS.CREATE_TODO, validatedData)
+    return validateApiResponse(todoItemSchema, data)
   },
 
   /**
    * Update todo
    * @param {number} id - Todo ID
-   * @param {Object} todo - Todo object
-   * @returns {Promise<Object>} Updated todo object
+   * @param {import('zod').infer<typeof updateTodoSchema>} todo - Todo object
+   * @returns {Promise<import('zod').infer<typeof todoItemSchema>>} Updated todo object
    */
   async updateTodo(id, todo) {
-    const { data } = await axiosInstance.put(ENDPOINTS.UPDATE_TODO(id), todo)
-    return data
+    // Validate request data
+    const validatedData = updateTodoSchema.parse(todo)
+    const { data } = await axiosInstance.put(ENDPOINTS.UPDATE_TODO(id), validatedData)
+    return validateApiResponse(todoItemSchema, data)
   },
 
   /**
@@ -58,5 +67,5 @@ export const todoApi = {
    */
   async deleteTodo(id) {
     await axiosInstance.delete(ENDPOINTS.DELETE_TODO(id))
-  },
+  }
 }

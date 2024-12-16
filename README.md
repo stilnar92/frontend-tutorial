@@ -1,150 +1,296 @@
-# Todo Application with API Integration
+# Zod API Validation Guide
 
-This guide explains how to integrate an API with a React application using custom hooks and proper architecture.
+## Introduction to Zod
 
-## Table of Contents
-- [Project Structure](#project-structure)
-- [API Integration](#api-integration)
-- [Custom Hooks](#custom-hooks)
-- [Component Integration](#component-integration)
-- [Error Handling](#error-handling)
-- [Best Practices](#best-practices)
+Zod is a TypeScript-first schema declaration and validation library. It lets you create schemas that validate data at runtime while providing static type inference.
 
-## Project Structure
+## Core Concepts
 
-```
-src/
-├── entities/
-│   └── todo/
-│       ├── api/
-│       │   └── todoApi.js       # API methods
-│       ├── hooks/
-│       │   ├── useTodoList.js   # Todo list management
-│       │   └── useTodoForm.js   # Form handling
-│       └── model/
-│           └── schema.js        # Validation schema
-├── features/
-│   ├── todo-create/
-│   │   └── ui/
-│   │       └── TodoForm/
-│   └── todo-list/
-│       └── ui/
-│           ├── TodoList/
-│           └── TodoListContainer/
-└── shared/
-    └── api/
-        └── axios.js             # Axios instance
-```
+### 1. Schema Definition
 
-## API Integration
+Schemas are the building blocks of Zod validation. They define the shape and constraints of your data:
 
-### 1. Setup Axios Instance
+```typescript
+import { z } from 'zod'
 
-```javascript
-// src/shared/api/axios.js
-import axios from 'axios'
+// Basic schema
+const userSchema = z.object({
+  id: z.number(),
+  email: z.string().email(),
+  age: z.number().min(18)
+})
 
-export const axiosInstance = axios.create({
-  baseURL: 'https://api.example.com',
-  timeout: 5000,
-  headers: {
-    'Content-Type': 'application/json'
-  }
+// Nested schema
+const postSchema = z.object({
+  title: z.string(),
+  author: userSchema,
+  tags: z.array(z.string())
 })
 ```
 
-### 2. Define API Methods
+### 2. Data Validation
 
-```javascript
-// src/entities/todo/api/todoApi.js
-import { axiosInstance } from '@shared/api/axios'
+Validate data using schema methods:
 
-const ENDPOINTS = {
-  GET_TODOS: '/todos',
-  GET_TODO: (id) => `/todos/${id}`,
-  CREATE_TODO: '/todos',
-  UPDATE_TODO: (id) => `/todos/${id}`,
-  DELETE_TODO: (id) => `/todos/${id}`
+```typescript
+// Using .parse() - throws error on invalid data
+try {
+  const user = userSchema.parse(data)
+} catch (error) {
+  console.error(error.errors) // Validation error details
 }
+
+// Using .safeParse() - returns success/error object
+const result = userSchema.safeParse(data)
+if (!result.success) {
+  console.error(result.error.errors)
+} else {
+  const validatedData = result.data
+}
+```
+
+## API Validation Patterns
+
+### 1. Request Validation
+
+```typescript
+// Request schema
+const createUserRequest = z.object({
+  email: z.string().email(),
+  password: z.string().min(8),
+  name: z.string()
+})
+
+// API endpoint
+async function createUser(req) {
+  const result = createUserRequest.safeParse(req.body)
+  if (!result.success) {
+    return {
+      status: 400,
+      body: { errors: result.error.errors }
+    }
+  }
+  
+  // Proceed with validated data
+  const user = await db.users.create(result.data)
+}
+```
+
+### 2. Response Validation
+
+```typescript
+// Response schema
+const userResponse = z.object({
+  id: z.number(),
+  email: z.string(),
+  createdAt: z.string().datetime()
+})
+
+// API response validation
+async function fetchUser(id) {
+  const response = await api.get(`/users/${id}`)
+  return userResponse.parse(response.data)
+}
+```
+
+### 3. Error Handling
+
+```typescript
+// API error schema
+const apiError = z.object({
+  code: z.number(),
+  message: z.string(),
+  details: z.record(z.any()).optional()
+})
+
+// Error handler
+function handleApiError(error) {
+  try {
+    const parsedError = apiError.parse(error.response?.data)
+    return {
+      message: parsedError.message,
+      code: parsedError.code
+    }
+  } catch {
+    return {
+      message: 'Unknown error occurred',
+      code: 500
+    }
+  }
+}
+```
+
+## Advanced Validation Techniques
+
+### 1. Transformations
+
+```typescript
+const dateSchema = z.string().datetime()
+  .transform(str => new Date(str))
+
+const userWithDates = userSchema.extend({
+  createdAt: dateSchema,
+  updatedAt: dateSchema
+})
+```
+
+### 2. Custom Validations
+
+```typescript
+const passwordSchema = z.string()
+  .min(8)
+  .refine(
+    password => /[A-Z]/.test(password),
+    'Password must contain uppercase letter'
+  )
+  .refine(
+    password => /[0-9]/.test(password),
+    'Password must contain number'
+  )
+```
+
+### 3. Partial Updates
+
+```typescript
+// Original schema
+const userSchema = z.object({
+  email: z.string().email(),
+  name: z.string(),
+  age: z.number()
+})
+
+// Partial schema for updates
+const userUpdateSchema = userSchema.partial()
+// Allows: { email?: string, name?: string, age?: number }
+```
+
+### 4. Union Types
+
+```typescript
+const responseSchema = z.union([
+  z.object({ status: z.literal('success'), data: userSchema }),
+  z.object({ status: z.literal('error'), error: apiError })
+])
+```
+
+## Project Implementation Example
+
+Let's look at how we implement Zod validation in our Todo application:
+
+### 1. Todo Schemas
+
+```typescript
+// src/entities/todo/model/validation.js
+import { z } from 'zod'
+
+// Base todo schema for shared fields
+const todoBase = {
+  title: z.string()
+    .min(3, 'Title must be at least 3 characters')
+    .max(50, 'Title must be less than 50 characters'),
+  completed: z.boolean().default(false)
+}
+
+// Schema for individual todo items from API
+export const todoItemSchema = z.object({
+  ...todoBase,
+  id: z.number(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime()
+})
+
+// Schema for creating new todos
+export const createTodoSchema = z.object({
+  ...todoBase
+})
+
+// Schema for updating existing todos
+export const updateTodoSchema = createTodoSchema.partial()
+
+// Schema for API responses containing todo lists
+export const todoListSchema = z.array(todoItemSchema)
+
+// Schema for API error responses
+export const apiErrorSchema = z.object({
+  message: z.string(),
+  code: z.number().optional(),
+  details: z.record(z.any()).optional()
+})
+```
+
+### 2. API Integration
+
+```typescript
+// src/shared/api/axios.js
+import axios from 'axios'
+import { apiErrorSchema } from '@/entities/todo/model/validation'
+
+export const axiosInstance = axios.create({
+  baseURL: '/api'
+})
+
+axiosInstance.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.response?.data) {
+      try {
+        // Validate error response against our schema
+        const validatedError = apiErrorSchema.parse(error.response.data)
+        return Promise.reject(validatedError)
+      } catch (validationError) {
+        // If error response doesn't match our schema, return generic error
+        return Promise.reject({
+          message: 'An unexpected error occurred',
+          code: 500
+        })
+      }
+    }
+    return Promise.reject(error)
+  }
+)
+```
+
+### 3. Todo API with Validation
+
+```typescript
+// src/entities/todo/api/todoApi.js
+import { axiosInstance } from '@/shared/api/axios'
+import {
+  todoItemSchema,
+  todoListSchema,
+  createTodoSchema,
+  updateTodoSchema
+} from '../model/validation'
 
 export const todoApi = {
   async getTodos() {
-    const { data } = await axiosInstance.get(ENDPOINTS.GET_TODOS)
-    return data
+    const { data } = await axiosInstance.get('/todos')
+    return todoListSchema.parse(data)
   },
 
   async createTodo(todo) {
-    const { data } = await axiosInstance.post(ENDPOINTS.CREATE_TODO, todo)
-    return data
+    // Validate request data before sending
+    const validTodo = createTodoSchema.parse(todo)
+    const { data } = await axiosInstance.post('/todos', validTodo)
+    return todoItemSchema.parse(data)
   },
 
   async updateTodo(id, todo) {
-    const { data } = await axiosInstance.put(ENDPOINTS.UPDATE_TODO(id), todo)
-    return data
-  },
-
-  async deleteTodo(id) {
-    await axiosInstance.delete(ENDPOINTS.DELETE_TODO(id))
+    // Validate update data, allowing partial updates
+    const validTodo = updateTodoSchema.parse(todo)
+    const { data } = await axiosInstance.put(`/todos/${id}`, validTodo)
+    return todoItemSchema.parse(data)
   }
 }
 ```
 
-## Custom Hooks
+### 4. Form Validation with React Hook Form
 
-### 1. Todo List Management Hook
-
-```javascript
-// src/entities/todo/hooks/useTodoList.js
-import { useState, useCallback } from 'react'
-import { todoApi } from '../api/todoApi'
-
-export const useTodoList = () => {
-  const [todos, setTodos] = useState([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState(null)
-
-  const fetchTodos = useCallback(async () => {
-    try {
-      setIsLoading(true)
-      const data = await todoApi.getTodos()
-      setTodos(data)
-    } catch (error) {
-      setError('Failed to fetch todos')
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
-
-  const toggleTodo = async (id) => {
-    try {
-      const todo = todos.find(t => t.id === id)
-      const updatedTodo = await todoApi.updateTodo(id, {
-        ...todo,
-        completed: !todo.completed
-      })
-      setTodos(todos.map(t => t.id === id ? updatedTodo : t))
-    } catch (error) {
-      console.error('Failed to toggle todo:', error)
-    }
-  }
-
-  return {
-    todos,
-    isLoading,
-    error,
-    fetchTodos,
-    toggleTodo
-  }
-}
-```
-
-### 2. Form Management Hook
-
-```javascript
+```typescript
 // src/entities/todo/hooks/useTodoForm.js
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { todoSchema } from '../model/schema'
+import { createTodoSchema } from '../model/validation'
 import { todoApi } from '../api/todoApi'
 
 export const useTodoForm = ({ onSuccess }) => {
@@ -152,9 +298,14 @@ export const useTodoForm = ({ onSuccess }) => {
     register,
     handleSubmit,
     reset,
-    formState: { errors, isSubmitting }
+    setError,
+    formState: { errors }
   } = useForm({
-    resolver: zodResolver(todoSchema)
+    resolver: zodResolver(createTodoSchema),
+    defaultValues: {
+      title: '',
+      completed: false
+    }
   })
 
   const onSubmit = async (data) => {
@@ -163,133 +314,155 @@ export const useTodoForm = ({ onSuccess }) => {
       reset()
       onSuccess?.()
     } catch (error) {
-      console.error('Failed to create todo:', error)
+      // Handle validation errors from API
+      if (error.code === 400) {
+        setError('root', {
+          message: error.message
+        })
+      }
     }
   }
 
   return {
     register,
     handleSubmit: handleSubmit(onSubmit),
-    errors,
-    isSubmitting
+    errors
   }
 }
 ```
 
-## Component Integration
+### 5. Using Validated Data in Components
 
-### 1. Todo Form Component
-
-```javascript
+```typescript
 // src/features/todo-create/ui/TodoForm/TodoForm.jsx
-import { useTodoForm } from '@entities/todo/hooks/useTodoForm'
+import { useTodoForm } from '@/entities/todo/hooks/useTodoForm'
 
-const TodoForm = ({ onSuccess }) => {
-  const { register, handleSubmit, errors, isSubmitting } = useTodoForm({
+export const TodoForm = ({ onSuccess }) => {
+  const { register, handleSubmit, errors } = useTodoForm({
     onSuccess
   })
 
   return (
     <form onSubmit={handleSubmit}>
-      <input {...register('title')} />
-      {errors.title && <span>{errors.title.message}</span>}
-      <button disabled={isSubmitting}>
-        {isSubmitting ? 'Adding...' : 'Add'}
-      </button>
+      <input
+        {...register('title')}
+        placeholder="Enter todo title"
+      />
+      {errors.title && (
+        <span className="error">{errors.title.message}</span>
+      )}
+      {errors.root && (
+        <span className="error">{errors.root.message}</span>
+      )}
+      <button type="submit">Add Todo</button>
     </form>
   )
 }
 ```
 
-### 2. Todo List Container
+### Benefits in Our Project
 
-```javascript
-// src/features/todo-list/ui/TodoListContainer/TodoListContainer.jsx
-import { useEffect } from 'react'
-import { useTodoList } from '@entities/todo/hooks/useTodoList'
+1. **Type Safety**: 
+   - All todo data is validated against defined schemas
+   - TypeScript types are automatically inferred from schemas
 
-const TodoListContainer = () => {
-  const { todos, isLoading, error, fetchTodos } = useTodoList()
+2. **Consistent Validation**:
+   - Same validation rules applied on both client and server
+   - Prevents invalid data from being sent to the API
 
-  useEffect(() => {
-    fetchTodos()
-  }, [fetchTodos])
+3. **Better Error Handling**:
+   - Structured error messages for form validation
+   - Consistent API error handling across the application
 
-  if (isLoading) return <div>Loading...</div>
-  if (error) return <div>{error}</div>
+4. **Maintainable Code**:
+   - Centralized validation logic in schema definitions
+   - Easy to update validation rules in one place
 
-  return <TodoList todos={todos} />
-}
-```
-
-## Error Handling
-
-### 1. API Level
-
-```javascript
-// src/shared/api/axios.js
-axiosInstance.interceptors.response.use(
-  response => response,
-  error => {
-    if (error.response?.status === 401) {
-      // Handle unauthorized
-    }
-    return Promise.reject(error)
-  }
-)
-```
-
-### 2. Hook Level
-
-```javascript
-const useTodoList = () => {
-  const handleError = (error) => {
-    if (error.response?.status === 404) {
-      setError('Todos not found')
-    } else {
-      setError('Failed to fetch todos')
-    }
-  }
-
-  const fetchTodos = async () => {
-    try {
-      // ... fetch logic
-    } catch (error) {
-      handleError(error)
-    }
-  }
-}
-```
+5. **Developer Experience**:
+   - Autocomplete for todo properties
+   - Runtime type checking during development
 
 ## Best Practices
 
-1. **API Organization**
-   - Keep API methods in separate files
-   - Use constants for endpoints
-   - Implement proper error handling
+### 1. Schema Organization
 
-2. **Custom Hooks**
-   - Separate data fetching logic from components
-   - Handle loading and error states
-   - Provide clear interfaces
+```typescript
+// Shared base schemas
+const baseUser = {
+  email: z.string().email(),
+  name: z.string()
+}
 
-3. **Components**
-   - Keep components focused on rendering
-   - Use container/presenter pattern
-   - Handle loading and error states gracefully
+// Derived schemas
+const createUserSchema = z.object({
+  ...baseUser,
+  password: z.string().min(8)
+})
 
-4. **Error Handling**
-   - Implement global error handling
-   - Show user-friendly error messages
-   - Log errors for debugging
+const userResponseSchema = z.object({
+  ...baseUser,
+  id: z.number(),
+  createdAt: z.string().datetime()
+})
+```
 
-5. **State Management**
-   - Use local state for UI-specific data
-   - Consider global state for shared data
-   - Optimize re-renders
+### 2. Error Messages
+
+```typescript
+const loginSchema = z.object({
+  email: z.string({
+    required_error: 'Email is required',
+    invalid_type_error: 'Email must be a string'
+  }).email('Invalid email format'),
+  password: z.string({
+    required_error: 'Password is required'
+  }).min(8, 'Password must be at least 8 characters')
+})
+```
+
+### 3. Type Inference
+
+```typescript
+// Infer types from schemas
+type User = z.infer<typeof userSchema>
+type CreateUserRequest = z.infer<typeof createUserSchema>
+type ApiError = z.infer<typeof apiError>
+```
+
+## Common Patterns
+
+### 1. Optional Fields
+
+```typescript
+const schema = z.object({
+  required: z.string(),
+  optional: z.string().optional(), // undefined allowed
+  nullable: z.string().nullable(), // null allowed
+  nullishable: z.string().nullish() // null or undefined allowed
+})
+```
+
+### 2. Array Validation
+
+```typescript
+const listSchema = z.object({
+  items: z.array(z.string())
+    .min(1, 'List cannot be empty')
+    .max(10, 'Too many items')
+})
+```
+
+### 3. Enum Validation
+
+```typescript
+const UserRole = z.enum(['admin', 'user', 'guest'])
+const userWithRole = userSchema.extend({
+  role: UserRole
+})
+```
 
 ## Resources
 
-- [Axios Documentation](https://axios-http.com/)
-- [React Hook Form](https://react-hook-form.com/)
-- [Custom Hooks Guide](https://react.dev/learn/reusing-logic-with-custom-hooks)
+- [Zod Documentation](https://zod.dev)
+- [Zod GitHub Repository](https://github.com/colinhacks/zod)
+- [TypeScript Integration](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-4-9.html#zod)
