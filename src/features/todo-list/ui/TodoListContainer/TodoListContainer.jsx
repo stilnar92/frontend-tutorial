@@ -1,8 +1,8 @@
 import { useEffect } from 'react'
 import { useTodoList } from '@entities/todo/hooks/useTodoList'
-import TodoList from '../TodoList/TodoList'
+import {TodoList} from '../TodoList/TodoList'
 
-const TodoListContainer = () => {
+export const TodoListContainer = () => {
   const {
     todos,
     isLoading,
@@ -41,4 +41,3 @@ const TodoListContainer = () => {
   )
 }
 
-export default TodoListContainer

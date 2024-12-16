@@ -1,468 +1,297 @@
-# Zod API Validation Guide
+# React Router Guide
 
-## Introduction to Zod
+## What is React Router?
 
-Zod is a TypeScript-first schema declaration and validation library. It lets you create schemas that validate data at runtime while providing static type inference.
+React Router is a client-side routing library for React applications. It allows you to create single-page applications with dynamic, client-side routing.
 
 ## Core Concepts
 
-### 1. Schema Definition
+1. **BrowserRouter**: Uses HTML5 history API to keep UI in sync with URL
+2. **Routes**: Defines route configuration and mapping
+3. **Route**: Individual route definitions
+4. **Link**: Navigation without page reload
+5. **Outlet**: Renders child routes
 
-Schemas are the building blocks of Zod validation. They define the shape and constraints of your data:
+## Step-by-Step Implementation
 
-```typescript
-import { z } from 'zod'
+### 1. Installation
 
-// Basic schema
-const userSchema = z.object({
-  id: z.number(),
-  email: z.string().email(),
-  age: z.number().min(18)
-})
-
-// Nested schema
-const postSchema = z.object({
-  title: z.string(),
-  author: userSchema,
-  tags: z.array(z.string())
-})
+```bash
+npm install react-router-dom
 ```
 
-### 2. Data Validation
+### 2. Basic Setup
 
-Validate data using schema methods:
+```javascript
+// src/app/router/index.jsx
+import { createBrowserRouter } from 'react-router-dom'
+import { HomePage } from '@/pages'
 
-```typescript
-// Using .parse() - throws error on invalid data
-try {
-  const user = userSchema.parse(data)
-} catch (error) {
-  console.error(error.errors) // Validation error details
-}
-
-// Using .safeParse() - returns success/error object
-const result = userSchema.safeParse(data)
-if (!result.success) {
-  console.error(result.error.errors)
-} else {
-  const validatedData = result.data
-}
-```
-
-## API Validation Patterns
-
-### 1. Request Validation
-
-```typescript
-// Request schema
-const createUserRequest = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
-  name: z.string()
-})
-
-// API endpoint
-async function createUser(req) {
-  const result = createUserRequest.safeParse(req.body)
-  if (!result.success) {
-    return {
-      status: 400,
-      body: { errors: result.error.errors }
-    }
+export const router = createBrowserRouter([
+  {
+    path: '/',
+    element: <HomePage />
   }
-  
-  // Proceed with validated data
-  const user = await db.users.create(result.data)
+])
+
+// src/app/index.jsx
+import { RouterProvider } from 'react-router-dom'
+import { router } from './router'
+
+export const App = () => {
+  return <RouterProvider router={router} />
 }
 ```
 
-### 2. Response Validation
+### 3. Creating Pages
 
-```typescript
-// Response schema
-const userResponse = z.object({
-  id: z.number(),
-  email: z.string(),
-  createdAt: z.string().datetime()
-})
+```javascript
+// src/pages/home/ui/HomePage.jsx
+export const HomePage = () => {
+  return (
+    <div>
+      <h1>Home Page</h1>
+      <p>Welcome to our app!</p>
+    </div>
+  )
+}
 
-// API response validation
-async function fetchUser(id) {
-  const response = await api.get(`/users/${id}`)
-  return userResponse.parse(response.data)
+// src/pages/about/ui/AboutPage.jsx
+export const AboutPage = () => {
+  return (
+    <div>
+      <h1>About Page</h1>
+      <p>Learn more about us</p>
+    </div>
+  )
 }
 ```
 
-### 3. Error Handling
+### 4. Adding Multiple Routes
 
-```typescript
-// API error schema
-const apiError = z.object({
-  code: z.number(),
-  message: z.string(),
-  details: z.record(z.any()).optional()
-})
+```javascript
+// src/app/router/index.jsx
+import { HomePage, AboutPage } from '@/pages'
 
-// Error handler
-function handleApiError(error) {
-  try {
-    const parsedError = apiError.parse(error.response?.data)
-    return {
-      message: parsedError.message,
-      code: parsedError.code
-    }
-  } catch {
-    return {
-      message: 'Unknown error occurred',
-      code: 500
-    }
+export const router = createBrowserRouter([
+  {
+    path: '/',
+    element: <HomePage />
+  },
+  {
+    path: '/about',
+    element: <AboutPage />
   }
-}
-```
-
-## Advanced Validation Techniques
-
-### 1. Transformations
-
-```typescript
-const dateSchema = z.string().datetime()
-  .transform(str => new Date(str))
-
-const userWithDates = userSchema.extend({
-  createdAt: dateSchema,
-  updatedAt: dateSchema
-})
-```
-
-### 2. Custom Validations
-
-```typescript
-const passwordSchema = z.string()
-  .min(8)
-  .refine(
-    password => /[A-Z]/.test(password),
-    'Password must contain uppercase letter'
-  )
-  .refine(
-    password => /[0-9]/.test(password),
-    'Password must contain number'
-  )
-```
-
-### 3. Partial Updates
-
-```typescript
-// Original schema
-const userSchema = z.object({
-  email: z.string().email(),
-  name: z.string(),
-  age: z.number()
-})
-
-// Partial schema for updates
-const userUpdateSchema = userSchema.partial()
-// Allows: { email?: string, name?: string, age?: number }
-```
-
-### 4. Union Types
-
-```typescript
-const responseSchema = z.union([
-  z.object({ status: z.literal('success'), data: userSchema }),
-  z.object({ status: z.literal('error'), error: apiError })
 ])
 ```
 
-## Project Implementation Example
+### 5. Creating Layout
 
-Let's look at how we implement Zod validation in our Todo application:
+```javascript
+// src/widgets/layouts/RootLayout.jsx
+import { Outlet } from 'react-router-dom'
 
-### 1. Todo Schemas
-
-```typescript
-// src/entities/todo/model/validation.js
-import { z } from 'zod'
-
-// Base todo schema for shared fields
-const todoBase = {
-  title: z.string()
-    .min(3, 'Title must be at least 3 characters')
-    .max(50, 'Title must be less than 50 characters'),
-  completed: z.boolean().default(false)
-}
-
-// Schema for individual todo items from API
-export const todoItemSchema = z.object({
-  ...todoBase,
-  id: z.number(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime()
-})
-
-// Schema for creating new todos
-export const createTodoSchema = z.object({
-  ...todoBase
-})
-
-// Schema for updating existing todos
-export const updateTodoSchema = createTodoSchema.partial()
-
-// Schema for API responses containing todo lists
-export const todoListSchema = z.array(todoItemSchema)
-
-// Schema for API error responses
-export const apiErrorSchema = z.object({
-  message: z.string(),
-  code: z.number().optional(),
-  details: z.record(z.any()).optional()
-})
-```
-
-### 2. API Integration
-
-```typescript
-// src/shared/api/axios.js
-import axios from 'axios'
-import { apiErrorSchema } from '@/entities/todo/model/validation'
-
-export const axiosInstance = axios.create({
-  baseURL: '/api'
-})
-
-axiosInstance.interceptors.response.use(
-  response => response,
-  error => {
-    if (error.response?.data) {
-      try {
-        // Validate error response against our schema
-        const validatedError = apiErrorSchema.parse(error.response.data)
-        return Promise.reject(validatedError)
-      } catch (validationError) {
-        // If error response doesn't match our schema, return generic error
-        return Promise.reject({
-          message: 'An unexpected error occurred',
-          code: 500
-        })
-      }
-    }
-    return Promise.reject(error)
-  }
-)
-```
-
-### 3. Todo API with Validation
-
-```typescript
-// src/entities/todo/api/todoApi.js
-import { axiosInstance } from '@/shared/api/axios'
-import {
-  todoItemSchema,
-  todoListSchema,
-  createTodoSchema,
-  updateTodoSchema
-} from '../model/validation'
-
-export const todoApi = {
-  async getTodos() {
-    const { data } = await axiosInstance.get('/todos')
-    return todoListSchema.parse(data)
-  },
-
-  async createTodo(todo) {
-    // Validate request data before sending
-    const validTodo = createTodoSchema.parse(todo)
-    const { data } = await axiosInstance.post('/todos', validTodo)
-    return todoItemSchema.parse(data)
-  },
-
-  async updateTodo(id, todo) {
-    // Validate update data, allowing partial updates
-    const validTodo = updateTodoSchema.parse(todo)
-    const { data } = await axiosInstance.put(`/todos/${id}`, validTodo)
-    return todoItemSchema.parse(data)
-  }
-}
-```
-
-### 4. Form Validation with React Hook Form
-
-```typescript
-// src/entities/todo/hooks/useTodoForm.js
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { createTodoSchema } from '../model/validation'
-import { todoApi } from '../api/todoApi'
-
-export const useTodoForm = ({ onSuccess }) => {
-  const {
-    register,
-    handleSubmit,
-    reset,
-    setError,
-    formState: { errors }
-  } = useForm({
-    resolver: zodResolver(createTodoSchema),
-    defaultValues: {
-      title: '',
-      completed: false
-    }
-  })
-
-  const onSubmit = async (data) => {
-    try {
-      await todoApi.createTodo(data)
-      reset()
-      onSuccess?.()
-    } catch (error) {
-      // Handle validation errors from API
-      if (error.code === 400) {
-        setError('root', {
-          message: error.message
-        })
-      }
-    }
-  }
-
-  return {
-    register,
-    handleSubmit: handleSubmit(onSubmit),
-    errors
-  }
-}
-```
-
-### 5. Using Validated Data in Components
-
-```typescript
-// src/features/todo-create/ui/TodoForm/TodoForm.jsx
-import { useTodoForm } from '@/entities/todo/hooks/useTodoForm'
-
-export const TodoForm = ({ onSuccess }) => {
-  const { register, handleSubmit, errors } = useTodoForm({
-    onSuccess
-  })
-
+export const RootLayout = () => {
   return (
-    <form onSubmit={handleSubmit}>
-      <input
-        {...register('title')}
-        placeholder="Enter todo title"
-      />
-      {errors.title && (
-        <span className="error">{errors.title.message}</span>
-      )}
-      {errors.root && (
-        <span className="error">{errors.root.message}</span>
-      )}
-      <button type="submit">Add Todo</button>
-    </form>
+    <div>
+      <header>
+        <nav>{/* Navigation links */}</nav>
+      </header>
+      <main>
+        <Outlet />
+      </main>
+      <footer>{/* Footer content */}</footer>
+    </div>
   )
 }
 ```
 
-### Benefits in Our Project
+### 6. Implementing Navigation
 
-1. **Type Safety**: 
-   - All todo data is validated against defined schemas
-   - TypeScript types are automatically inferred from schemas
+```javascript
+// src/widgets/layouts/Header.jsx
+import { Link, NavLink } from 'react-router-dom'
 
-2. **Consistent Validation**:
-   - Same validation rules applied on both client and server
-   - Prevents invalid data from being sent to the API
+export const Header = () => {
+  return (
+    <nav>
+      <NavLink 
+        to="/"
+        className={({ isActive }) => 
+          isActive ? 'text-blue-500' : ''
+        }
+      >
+        Home
+      </NavLink>
+      <NavLink 
+        to="/about"
+        className={({ isActive }) => 
+          isActive ? 'text-blue-500' : ''
+        }
+      >
+        About
+      </NavLink>
+    </nav>
+  )
+}
+```
 
-3. **Better Error Handling**:
-   - Structured error messages for form validation
-   - Consistent API error handling across the application
+## Common Use Cases
 
-4. **Maintainable Code**:
-   - Centralized validation logic in schema definitions
-   - Easy to update validation rules in one place
+### 1. Dynamic Routes
 
-5. **Developer Experience**:
-   - Autocomplete for todo properties
-   - Runtime type checking during development
+```javascript
+// Router configuration
+{
+  path: '/todo/:id',
+  element: <TodoPage />
+}
+
+// TodoPage component
+import { useParams } from 'react-router-dom'
+
+export const TodoPage = () => {
+  const { id } = useParams()
+  return <div>Todo ID: {id}</div>
+}
+```
+
+### 2. Programmatic Navigation
+
+```javascript
+import { useNavigate } from 'react-router-dom'
+
+export const TodoForm = () => {
+  const navigate = useNavigate()
+
+  const onSubmit = async (data) => {
+    await saveTodo(data)
+    navigate('/todos')
+  }
+
+  return <form onSubmit={onSubmit}>...</form>
+}
+```
+
+### 3. Query Parameters
+
+```javascript
+import { useSearchParams } from 'react-router-dom'
+
+export const TodoList = () => {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const filter = searchParams.get('filter') || 'all'
+
+  return (
+    <select 
+      value={filter}
+      onChange={e => setSearchParams({ filter: e.target.value })}
+    >
+      <option value="all">All</option>
+      <option value="active">Active</option>
+      <option value="completed">Completed</option>
+    </select>
+  )
+}
+```
+
+### 4. Protected Routes
+
+```javascript
+import { Navigate, useLocation } from 'react-router-dom'
+
+const PrivateRoute = ({ children }) => {
+  const isAuthenticated = useAuth() // Your auth hook
+  const location = useLocation()
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location }} />
+  }
+
+  return children
+}
+
+// Usage in router
+{
+  path: '/profile',
+  element: (
+    <PrivateRoute>
+      <ProfilePage />
+    </PrivateRoute>
+  )
+}
+```
 
 ## Best Practices
 
-### 1. Schema Organization
+1. **Route Organization**
+   ```javascript
+   const router = createBrowserRouter([
+     {
+       element: <RootLayout />,
+       errorElement: <ErrorPage />,
+       children: [
+         {
+           path: '/',
+           element: <HomePage />
+         },
+         {
+           path: '/about',
+           element: <AboutPage />
+         }
+       ]
+     }
+   ])
+   ```
 
-```typescript
-// Shared base schemas
-const baseUser = {
-  email: z.string().email(),
-  name: z.string()
-}
+2. **Lazy Loading**
+   ```javascript
+   import { lazy } from 'react'
+   
+   const AboutPage = lazy(() => import('./pages/AboutPage'))
+   
+   // In router
+   {
+     path: '/about',
+     element: (
+       <Suspense fallback={<Loading />}>
+         <AboutPage />
+       </Suspense>
+     )
+   }
+   ```
 
-// Derived schemas
-const createUserSchema = z.object({
-  ...baseUser,
-  password: z.string().min(8)
-})
+3. **Error Handling**
+   ```javascript
+   const ErrorPage = () => {
+     const error = useRouteError()
+     return (
+       <div>
+         <h1>Oops!</h1>
+         <p>{error.message}</p>
+       </div>
+     )
+   }
+   ```
 
-const userResponseSchema = z.object({
-  ...baseUser,
-  id: z.number(),
-  createdAt: z.string().datetime()
-})
-```
+## Common Hooks
 
-### 2. Error Messages
+1. `useNavigate()`: Programmatic navigation
+2. `useParams()`: Access URL parameters
+3. `useSearchParams()`: Handle query parameters
+4. `useLocation()`: Access current location
+5. `useRouteError()`: Access route errors
 
-```typescript
-const loginSchema = z.object({
-  email: z.string({
-    required_error: 'Email is required',
-    invalid_type_error: 'Email must be a string'
-  }).email('Invalid email format'),
-  password: z.string({
-    required_error: 'Password is required'
-  }).min(8, 'Password must be at least 8 characters')
-})
-```
+## Tips
 
-### 3. Type Inference
-
-```typescript
-// Infer types from schemas
-type User = z.infer<typeof userSchema>
-type CreateUserRequest = z.infer<typeof createUserSchema>
-type ApiError = z.infer<typeof apiError>
-```
-
-## Common Patterns
-
-### 1. Optional Fields
-
-```typescript
-const schema = z.object({
-  required: z.string(),
-  optional: z.string().optional(), // undefined allowed
-  nullable: z.string().nullable(), // null allowed
-  nullishable: z.string().nullish() // null or undefined allowed
-})
-```
-
-### 2. Array Validation
-
-```typescript
-const listSchema = z.object({
-  items: z.array(z.string())
-    .min(1, 'List cannot be empty')
-    .max(10, 'Too many items')
-})
-```
-
-### 3. Enum Validation
-
-```typescript
-const UserRole = z.enum(['admin', 'user', 'guest'])
-const userWithRole = userSchema.extend({
-  role: UserRole
-})
-```
+1. Always use `Link` or `NavLink` for navigation
+2. Implement proper error boundaries
+3. Use lazy loading for better performance
+4. Keep route configurations clean and organized
+5. Use descriptive route names
 
 ## Resources
 
-- [Zod Documentation](https://zod.dev)
-- [Zod GitHub Repository](https://github.com/colinhacks/zod)
-- [TypeScript Integration](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-4-9.html#zod)
+- [React Router Documentation](https://reactrouter.com)
+- [React Router Tutorial](https://reactrouter.com/en/main/start/tutorial)
+- [React Router GitHub](https://github.com/remix-run/react-router)

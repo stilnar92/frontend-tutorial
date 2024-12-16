@@ -1,6 +1,6 @@
 import { useTodoForm } from '@entities/todo/hooks/useTodoForm'
 
-const TodoForm = ({ onSuccess }) => {
+export const TodoForm = ({ onSuccess }) => {
   const { register, handleSubmit, errors, isSubmitting } = useTodoForm({ onSuccess })
 
   return (
@@ -34,4 +34,3 @@ const TodoForm = ({ onSuccess }) => {
   )
 }
 
-export default TodoForm

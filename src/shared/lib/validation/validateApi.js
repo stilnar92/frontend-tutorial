@@ -22,6 +22,7 @@ export const validateApiResponse = (schema, data) => {
     return schema.parse(data)
   } catch (error) {
     if (error instanceof ZodError) {
+      console.error('Validation failed:', error.errors)
       throw new ValidationError('API response validation failed', error.errors)
     }
     throw error
@@ -36,8 +37,8 @@ export const validateApiResponse = (schema, data) => {
 export const validateApiError = (error) => {
   try {
     return apiErrorSchema.parse(error)
-  } catch {
-    // If error doesn't match schema, return a generic error
+  } catch (validationError) {
+    console.error('Error response validation failed:', validationError)
     return {
       message: 'An unexpected error occurred',
       code: 500

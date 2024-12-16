@@ -22,6 +22,7 @@ export const todoApi = {
    */
   async getTodos() {
     const { data } = await axiosInstance.get(ENDPOINTS.GET_TODOS)
+    console.log('API Response:', data) // Debug log
     return validateApiResponse(todoListSchema, data)
   },
 
@@ -41,7 +42,6 @@ export const todoApi = {
    * @returns {Promise<import('zod').infer<typeof todoItemSchema>>} Created todo object
    */
   async createTodo(todo) {
-    // Validate request data
     const validatedData = createTodoSchema.parse(todo)
     const { data } = await axiosInstance.post(ENDPOINTS.CREATE_TODO, validatedData)
     return validateApiResponse(todoItemSchema, data)
@@ -54,7 +54,6 @@ export const todoApi = {
    * @returns {Promise<import('zod').infer<typeof todoItemSchema>>} Updated todo object
    */
   async updateTodo(id, todo) {
-    // Validate request data
     const validatedData = updateTodoSchema.parse(todo)
     const { data } = await axiosInstance.put(ENDPOINTS.UPDATE_TODO(id), validatedData)
     return validateApiResponse(todoItemSchema, data)

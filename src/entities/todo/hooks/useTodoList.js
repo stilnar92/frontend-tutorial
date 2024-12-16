@@ -8,12 +8,12 @@ export const useTodoList = () => {
   const [error, setError] = useState(null)
 
   const handleError = (error) => {
+    console.error('Error in useTodoList:', error)
     if (error instanceof ValidationError) {
       setError('Invalid data received from server')
       console.error('Validation errors:', error.errors)
     } else {
       setError(error.message || 'Failed to fetch todos')
-      console.error('API error:', error)
     }
   }
 
@@ -32,15 +32,16 @@ export const useTodoList = () => {
 
   const toggleTodo = async (id) => {
     try {
-      const todo = todos.find(t => t.id === id)
+      const todo = todos.find((t) => t.id === id)
       if (!todo) return
 
       const updatedTodo = await todoApi.updateTodo(id, {
-        ...todo,
         completed: !todo.completed
       })
 
-      setTodos(todos.map(t => t.id === id ? updatedTodo : t))
+      setTodos((prevTodos) =>
+        prevTodos.map((t) => (t.id === id ? updatedTodo : t))
+      )
     } catch (error) {
       handleError(error)
     }
@@ -49,7 +50,7 @@ export const useTodoList = () => {
   const deleteTodo = async (id) => {
     try {
       await todoApi.deleteTodo(id)
-      setTodos(todos.filter(t => t.id !== id))
+      setTodos((prevTodos) => prevTodos.filter((t) => t.id !== id))
     } catch (error) {
       handleError(error)
     }
