@@ -1,31 +1,10 @@
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { todoSchema } from '@entities/todo/model/schema'
-import { useKeyPress } from '@shared/lib/hooks/useKeyPress'
+import { useTodoForm } from '@entities/todo/hooks/useTodoForm'
 
-const TodoForm = ({ onSubmit }) => {
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors }
-  } = useForm({
-    resolver: zodResolver(todoSchema),
-    defaultValues: {
-      title: ''
-    }
-  })
-
-  // Clear form with Escape key
-  useKeyPress('Escape', reset)
-
-  const onFormSubmit = (data) => {
-    onSubmit(data.title)
-    reset()
-  }
+const TodoForm = ({ onSuccess }) => {
+  const { register, handleSubmit, errors, isSubmitting } = useTodoForm({ onSuccess })
 
   return (
-    <form onSubmit={handleSubmit(onFormSubmit)} className="flex gap-4">
+    <form onSubmit={handleSubmit} className="flex gap-4">
       <div className="flex-1">
         <input
           type="text"
@@ -39,9 +18,10 @@ const TodoForm = ({ onSubmit }) => {
       </div>
       <button
         type="submit"
+        disabled={isSubmitting}
         className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        Add
+        {isSubmitting ? 'Adding...' : 'Add'}
       </button>
     </form>
   )
