@@ -1,21 +1,13 @@
 import { useEffect } from 'react'
-import { useTodoList } from '@entities/todo/hooks/useTodoList'
-import {TodoList} from '../TodoList/TodoList'
+import { TodoList } from '../TodoList/TodoList'
 
-export const TodoListContainer = () => {
-  const {
-    todos,
-    isLoading,
-    error,
-    fetchTodos,
-    toggleTodo,
-    deleteTodo
-  } = useTodoList()
-
-  useEffect(() => {
-    fetchTodos()
-  }, [fetchTodos])
-
+export const TodoListContainer = ({ 
+  todos, 
+  isLoading, 
+  error, 
+  onToggle, 
+  onDelete 
+}) => {
   if (isLoading) {
     return (
       <div className="text-center text-gray-500 py-8">
@@ -35,9 +27,8 @@ export const TodoListContainer = () => {
   return (
     <TodoList
       todos={todos}
-      onToggle={toggleTodo}
-      onDelete={deleteTodo}
+      onToggle={onToggle}
+      onDelete={onDelete}
     />
   )
 }
-

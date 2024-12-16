@@ -27,9 +27,7 @@ export const useTodoForm = ({ onSuccess } = {}) => {
     try {
       await todoApi.createTodo(data)
       reset()
-      if (onSuccess) {
-        onSuccess()
-      }
+      // Remove onSuccess call to prevent automatic todo list refresh
     } catch (error) {
       if (error instanceof ValidationError) {
         // Set form errors from API validation
