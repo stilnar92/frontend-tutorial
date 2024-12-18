@@ -48,7 +48,7 @@ export const axiosInstance = axios.create({
 })
 ```
 
-## Step 4: Define Entity Types
+## Step 4: Define Entity Types (Unnecessary)
 
 Create types in `src/entities/todo/model/types.js`:
 ```javascript
